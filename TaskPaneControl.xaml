@@ -3,16 +3,37 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:QuickFile"
+             xmlns:local="clr-namespace:QuickFile" xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="400">
-    <StackPanel Background="White" >
-        <Label Content="Hello"/>
-        <TextBlock x:Name="textBlock"  Text="Hello"/>
-        <TextBox x:Name="textBox" Height="23" TextWrapping="Wrap" Text="" TextChanged="TextBox_TextChanged"/>
-        <ListBox x:Name="listBox" MinHeight="100">
- 
+             d:DesignHeight="450" d:DesignWidth="400"
+              Background="White">
+            <!--xmlns:ui="http://schemas.modernwpf.com/2019"-->
+    
+           <!--<ResourceDictionary.MergedDictionaries>
+                <ui:ThemeResources />
+                <ui:XamlControlsResources />
+             </ResourceDictionary.MergedDictionaries>-->
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- MahApps.Metro resource dictionaries. Make sure that all file names are Case Sensitive! -->
+                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml" />
+                <!-- Theme setting -->
+                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Light.Blue.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <DockPanel Margin="10">
+        <StackPanel DockPanel.Dock="Top">
+            <mah:MetroHeader Content="Title"></mah:MetroHeader>
+            <Label Content="Hello"/>
+            <TextBox x:Name="textBox" Height="23" Text="" TextChanged="TextBox_TextChanged" Margin="0,0,0,10"/>
+        </StackPanel>
+        <Button x:Name="button" Content="Build List" Click="Button_Click" HorizontalAlignment="Center" DockPanel.Dock="Bottom"/>
+        <ListBox x:Name="listBox" MinHeight="100" SelectionMode="Single" Margin="0,0,0,10" VerticalAlignment="Top">
+            <!--<ListBoxItem>AAAA</ListBoxItem>
+            <ListBoxItem>ssssssssssssss</ListBoxItem>-->
         </ListBox>
-        <Button x:Name="button" Content="Button" Click="Button_Click"/>
-    </StackPanel>
+    </DockPanel>
 </UserControl>

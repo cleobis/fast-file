@@ -33,8 +33,7 @@ namespace QuickFile
         private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             TextBox senderTb = sender as TextBox;
-            this.textBlock.Text = senderTb.Text;
-
+        
             if (!(listBox is null))
             {
                 CollectionViewSource.GetDefaultView(listBox.ItemsSource).Refresh();
@@ -166,6 +165,7 @@ namespace QuickFile
 
         CollectionView collectionView = (CollectionView)CollectionViewSource.GetDefaultView(listBox.ItemsSource);
         collectionView.Filter = FilterHelper;
+            listBox.SelectedIndex = 0;
         }
 
         private List<String> EnumerateFoldersInDefaultStore()
