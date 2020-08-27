@@ -34,19 +34,21 @@
             // 
             // elementHost1
             // 
-            this.elementHost1.Location = new System.Drawing.Point(3, 3);
+            this.elementHost1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.elementHost1.Location = new System.Drawing.Point(0, 0);
+            this.elementHost1.MinimumSize = new System.Drawing.Size(100, 100);
             this.elementHost1.Name = "elementHost1";
-            this.elementHost1.Size = new System.Drawing.Size(787, 576);
+            this.elementHost1.Size = new System.Drawing.Size(793, 582);
             this.elementHost1.TabIndex = 0;
             this.elementHost1.Text = "elementHost1";
             this.elementHost1.Child = this.taskPaneControl;
             // 
-            // TaskPane
+            // TaskPaneControlWrapper
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.elementHost1);
-            this.Name = "TaskPane";
+            this.Name = "TaskPaneControlWrapper";
             this.Size = new System.Drawing.Size(793, 582);
             this.ResumeLayout(false);
 

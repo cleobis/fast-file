@@ -54,8 +54,9 @@ namespace QuickFile
             }
         }
 
-        private float SortHelper(string)
+        private float SortHelper(string str)
         {
+            return 0;
             // https://github.com/quicksilver/Quicksilver/blob/8be7395b795179cf51cf30ebf82779e0f9ba2138/Quicksilver/Code-QuickStepFoundation/QSSense.m
             /* 
              * 
