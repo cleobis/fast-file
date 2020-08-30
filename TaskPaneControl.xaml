@@ -6,8 +6,9 @@
              xmlns:local="clr-namespace:QuickFile" xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="400"
-              Background="White">
-            <!--xmlns:ui="http://schemas.modernwpf.com/2019"-->
+             Background="White"
+             Focusable="True">
+    <!--xmlns:ui="http://schemas.modernwpf.com/2019"-->
     
            <!--<ResourceDictionary.MergedDictionaries>
                 <ui:ThemeResources />
@@ -31,7 +32,7 @@
             <ScrollViewer Height="150">
             <TextBlock x:Name="textBlock"/>
             </ScrollViewer>
-            <TextBox x:Name="textBox" Height="23" Text="" TextChanged="TextBox_TextChanged" PreviewKeyDown="TextBox_PreviewKeyDown" KeyDown="TextBox_KeyDown" Margin="0,0,0,10"/>
+            <TextBox x:Name="textBox" Focusable="True" Height="23" Text="" TextChanged="TextBox_TextChanged" PreviewKeyDown="TextBox_PreviewKeyDown" KeyDown="TextBox_KeyDown" Margin="0,0,0,10"/>
         </StackPanel>
         <Button x:Name="button" Content="Build List" Click="Button_Click" HorizontalAlignment="Center" DockPanel.Dock="Bottom"
                 IsEnabled="{Binding ElementName=listBox, Path=SelectedItems.Count}"/>

@@ -1,9 +1,11 @@
 ﻿using ControlzEx.Standard;
+using MahApps.Metro.Controls;
 using Microsoft.Office.Interop.Outlook;
 using Microsoft.Xaml.Behaviors.Core;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,11 +21,10 @@ using System.Windows.Shapes;
 using Outlook = Microsoft.Office.Interop.Outlook;
 
 // TODO:
-// * Keyboard shortcuts
-// * Subscribe to folder events
 // * Multiple panels - https://docs.microsoft.com/en-us/visualstudio/vsto/walkthrough-displaying-custom-task-panes-with-e-mail-messages-in-outlook?view=vs-2019#prerequisites
+// * Improve styling
 // * Guess item from conversation
-// * Toolbar dropdown
+// * Toolbar dropdown?
 
 namespace QuickFile
 {
@@ -32,15 +33,29 @@ namespace QuickFile
     /// </summary>
     public partial class TaskPaneControl : UserControl
     {
-        private ObservableCollection<FolderWrapper> foldersCollection;
-        private FolderWrapper folderTree;
+
+        private ThisAddIn addIn;
+        private ListCollectionView listCollectionView;
+        internal TaskPaneContext taskPaneContext;
 
         public TaskPaneControl()
         {
             InitializeComponent();
+            
+            addIn = Globals.ThisAddIn;
 
-            UpdateFolderList();
+            listCollectionView = new ListCollectionView(addIn.foldersCollection);
+            listCollectionView.Filter = FilterHelper;
+            listCollectionView.CustomSort = new SortHelper("");
+            listBox.ItemsSource = listCollectionView;
+        }
 
+        internal void RefreshSelection()
+        {
+            if (listBox.SelectedIndex < 0)
+            {
+                listBox.SelectedIndex = 0;
+            }
         }
 
         private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -49,7 +64,7 @@ namespace QuickFile
 
             if (!(listBox is null))
             {
-                CollectionViewSource.GetDefaultView(listBox.ItemsSource).Refresh();
+                listCollectionView.Refresh();
                 if (listBox.SelectedIndex == -1 && listBox.Items.Count > 0)
                 {
                     listBox.SelectedIndex = 0;
@@ -308,221 +323,23 @@ namespace QuickFile
             switch (e.Key)
             {
                 case Key.Escape:
-                    textBox.Text = "";
+                    if (textBox.Text != "")
+                    {
+                        textBox.Text = "";
+                    }
+                    else
+                    {
+                        taskPaneContext.Visible = false;
+                    }
                     break;
                 default:
                     break;
             }
         }
-        public void UpdateFolderList()
+
+        private void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
-            if (folderTree is null)
-            {
-                Outlook.Folder root = Globals.ThisAddIn.Application.Session.DefaultStore.GetRootFolder() as Outlook.Folder;
-                // or loop over Application.Session.Stores
-
-                folderTree = new FolderWrapper(root, foldersCollection, null);
-                foldersCollection = new ObservableCollection<FolderWrapper>(); //Change to incremental update later *****
-                listBox.ItemsSource = foldersCollection;
-                ListCollectionView collectionView = (ListCollectionView)CollectionViewSource.GetDefaultView(listBox.ItemsSource);
-                collectionView.Filter = FilterHelper;
-                collectionView.CustomSort = new SortHelper("");
-            }
-            else
-            { 
-                // Clear collection
-                while (foldersCollection.Count > 0)
-                {
-                    foldersCollection.RemoveAt(foldersCollection.Count - 1);
-                }
-                MessageBox.Show("Rebuilding");
-            }
-
-            // Build or re-build collection
-            foreach (FolderWrapper fw in folderTree.Flattened())
-            {
-                foldersCollection.Add(fw);
-            }
-
-            if (listBox.SelectedIndex < 0)
-            {
-                listBox.SelectedIndex = 0;
-            }
-        }
-
-        /*
-        private void EnumerateFoldersInDefaultStore(ObservableCollection<FolderWrapper> container)
-        {
-            Outlook.Folder root =
-                Globals.ThisAddIn.Application.Session.DefaultStore.GetRootFolder() as Outlook.Folder;
-            // or loop over Application.Session.Stores
-            EnumerateFolders(root, container);
-        }
-
-        // Uses recursion to enumerate Outlook subfolders.
-        private void EnumerateFolders(Outlook.Folder folder, ObservableCollection<FolderWrapper> container)
-        {
-            List<String> ret = new List<String>();
-            Outlook.Folders childFolders =
-                folder.Folders;
-            if (childFolders.Count > 0)
-            {
-                foreach (Outlook.Folder childFolder in childFolders)
-                {
-                    // Write the folder path.
-                    container.Add(new FolderWrapper(childFolder));
-
-                    // Call EnumerateFolders using childFolder.
-                    EnumerateFolders(childFolder, container);
-                }
-            }
-        }
-        */
-
-        /* 
-         * Folder Change Events
-
-            Given a collection of folders in Outlook, several events are raised when folders in that collection change:
-            Folders.FolderAdd is raised on a Folders collection when a new folder is added. Outlook passes a folder parameter of type MAPIFolder representing the newly added folder.
-            Folders.FolderRemove is raised on a Folders collection when a folder is deleted.
-            Folders.FolderChange is raised on a Folders collection when a folder is changed. Examples of changes include when the folder is renamed or when the number of items in the folder changes. Outlook passes a folder parameter of type MAPIFolder representing the folder that has changed.
-            Listing 10-4 shows an add-in that handles folder change events for any subfolders under the Inbox folder. To get to a Folders collection, we first get a NameSpace object. The NameSpace object is accessed by calling the Application.Session property. The NameSpace object has a method called GetDefaultFolder that returns a MAPIFolder object to which you can pass a member of the enumeration OlDefaultFolders to get a standard Outlook folder. In Listing 10-4, we pass olFolderInbox to get a MAPIFolder for the Inbox. We then connect our event handlers to the Folders collection associated with the Inbox's MAPIFolder object.
-            Listing 10-4. A VSTO Add-In That Handles Folder Change Events
-            namespace OutlookAddin1
-            {
-             public partial class ThisApplication
-             {
-             Outlook.Folders folders;
-             private void ThisApplication_Startup(object sender, EventArgs e)
-             {
-             Outlook.NameSpace ns = this.Session;
-             Outlook.MAPIFolder folder = ns.GetDefaultFolder(
-             Outlook.OlDefaultFolders.olFolderInbox);
-             folders = folder.Folders;
-
-             
-
-             
-
-
-             }
-            }*/
-    }
-
-    public class FolderWrapper
-    {
-        public Outlook.Folder folder;
-        public String displayName;
-        private Outlook.Folders folders; // Have to retain this reference or the events get garbage collected
-        public FolderWrapper parent;
-        public List<FolderWrapper> children;
-        public ObservableCollection<FolderWrapper> collection;
-
-        public FolderWrapper(Outlook.Folder folder, ObservableCollection<FolderWrapper> collection, FolderWrapper parent = null)
-        {
-            this.folder = folder;
-            this.parent = parent;
-            this.collection = collection;
-            this.folders = folder.Folders;
-
-            int depth = 0;
-            var p = folder.Parent;
-            while (p is Outlook.Folder)
-            {
-                depth += 1;
-                p = (p as Outlook.Folder).Parent;
-            }
-
-            this.displayName = string.Concat(Enumerable.Repeat(" - ", depth)) + folder.Name;
-            this.displayName = folder.FolderPath;
-
-            //collection.Add(this);
-
-            children = new List<FolderWrapper>(folders.Count);
-            foreach (Outlook.Folder child in folders)
-            {
-                var fw = new FolderWrapper(child as Outlook.Folder, collection, this);
-                children.Add(fw);
-            }
-
-            // Listeners
-            folders.FolderAdd += new Outlook.FoldersEvents_FolderAddEventHandler(Folders_FolderAdd);
-            folders.FolderChange += new Outlook.FoldersEvents_FolderChangeEventHandler(Folders_FolderChange);
-            folders.FolderRemove += new Outlook.FoldersEvents_FolderRemoveEventHandler(Folders_FolderRemove);
-        }
-
-        public override String ToString()
-        {
-            return displayName + "(" + folder.Class + ")";
-        }
-
-        public void Folders_FolderAdd(Outlook.MAPIFolder new_folder)
-        {
-            FolderWrapper fw = new FolderWrapper(new_folder as Outlook.Folder, collection, this);
-            //children.Insert(0,fw);
-            //collection.Insert(collection.IndexOf(this) + 1, fw);
-
-            MessageBox.Show(String.Format("Added {0} folder to {1}.", new_folder.Name, this.folder.Name));
-
-            (Globals.ThisAddIn.taskPaneControl.taskPaneControl as TaskPaneControl).UpdateFolderList();
-        }
-
-        public void Folders_FolderChange(Outlook.MAPIFolder folder)
-        {
-            // Rename, Add child, or delete child.
-            // ********** DEAL WITH RENAME ***************
-            MessageBox.Show(String.Format(
-                //"Changed {0} folder. ", folder.Name));
-                "Changed {0} folder in {1}. ", folder.Name, this.folder.Name));
-        }
-
-        public void Folders_FolderRemove()
-        {
-            //MessageBox.Show("Removed a folder.");
-            MessageBox.Show(String.Format("Removed a folder from {0}.", this.folder.Name));
-
-            // Temp list of remaining folder for search convenience.
-            var remainingFolderIds = new List<String>(folders.Count);
-            foreach (Outlook.Folder f in folders)
-            {
-                remainingFolderIds.Add(f.EntryID);
-            }
-
-            for (int i = 0; i < children.Count; i++)
-            {
-                if (!remainingFolderIds.Contains(children[i].folder.EntryID))
-                {
-                    //RemoveChild(i);
-                    children.RemoveAt(i);
-                    return;
-                }
-            }
-            MessageBox.Show("Unable to find deleted folder");
-
-            (Globals.ThisAddIn.taskPaneControl.taskPaneControl as TaskPaneControl).UpdateFolderList();
-        }
-
-        /*public void RemoveChild(int i)
-        {
-            var child = children[i];
-            for (int j = child.children.Count - 1; j >= 0; j--)
-            {
-                child.RemoveChild(j);
-            }
-            collection.Remove(child);
-            children.RemoveAt(i);
-        }*/
-
-        public IEnumerable<FolderWrapper> Flattened()
-        {
-            yield return this;
-            foreach (var child in children)
-            {
-                foreach (var i in child.Flattened())
-                {
-                    yield return i;
-                }
-            }
+            textBox.Focus();
         }
     }
 }

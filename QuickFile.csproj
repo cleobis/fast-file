@@ -170,11 +170,17 @@
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Ribbon1.cs">
+    <Compile Include="ExplorerRibbon.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="Ribbon1.Designer.cs">
-      <DependentUpon>Ribbon1.cs</DependentUpon>
+    <Compile Include="ExplorerRibbon.Designer.cs">
+      <DependentUpon>ExplorerRibbon.cs</DependentUpon>
+    </Compile>
+    <Compile Include="MailReadRibbon.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="MailReadRibbon.Designer.cs">
+      <DependentUpon>MailReadRibbon.cs</DependentUpon>
     </Compile>
     <Compile Include="TaskPaneControlWrapper.cs">
       <SubType>UserControl</SubType>
@@ -185,6 +191,9 @@
     <Compile Include="TaskPaneControl.xaml.cs">
       <DependentUpon>TaskPaneControl.xaml</DependentUpon>
     </Compile>
+    <EmbeddedResource Include="MailReadRibbon.resx">
+      <DependentUpon>MailReadRibbon.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -194,8 +203,8 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <EmbeddedResource Include="Ribbon1.resx">
-      <DependentUpon>Ribbon1.cs</DependentUpon>
+    <EmbeddedResource Include="ExplorerRibbon.resx">
+      <DependentUpon>ExplorerRibbon.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="TaskPaneControlWrapper.resx">
       <DependentUpon>TaskPaneControlWrapper.cs</DependentUpon>
