@@ -57,6 +57,6 @@
         #endregion
 
         private System.Windows.Forms.Integration.ElementHost elementHost1;
-        private TaskPaneControl taskPaneControl;
+        public TaskPaneControl taskPaneControl;
     }
 }

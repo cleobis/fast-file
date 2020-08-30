@@ -10,8 +10,8 @@ namespace QuickFile
 {
     public partial class ThisAddIn
     {
-        private TaskPaneControlWrapper taskPaneControl;
-        private Microsoft.Office.Tools.CustomTaskPane customTaskPane;
+        public TaskPaneControlWrapper taskPaneControl;
+        public Microsoft.Office.Tools.CustomTaskPane customTaskPane;
 
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
