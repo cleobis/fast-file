@@ -3,17 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:QuickFile" xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+             xmlns:local="clr-namespace:QuickFile"
+             xmlns:mah="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="400"
              Background="White"
-             Focusable="True">
-    <!--xmlns:ui="http://schemas.modernwpf.com/2019"-->
-    
-           <!--<ResourceDictionary.MergedDictionaries>
-                <ui:ThemeResources />
-                <ui:XamlControlsResources />
-             </ResourceDictionary.MergedDictionaries>-->
+             Focusable="True"
+             
+             KeyDown="UserControl_KeyDown" PreviewKeyDown="UserControl_PreviewKeyDown">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -23,19 +20,26 @@
                 <!-- Theme setting -->
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Light.Blue.xaml" />
             </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
+            <Style x:Key="DeviceContainerStyle" TargetType="{x:Type ListBoxItem}">
+                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+            </Style>
+     </ResourceDictionary>
     </UserControl.Resources>
     <DockPanel Margin="10">
         <StackPanel DockPanel.Dock="Top">
-            <mah:MetroHeader Content="Title"></mah:MetroHeader>
+            <mah:MetroHeader Content="Title"/>
             <!--<Label Content="Hello"/>-->
-            <ScrollViewer Height="150">
-            <TextBlock x:Name="textBlock"/>
+            <ScrollViewer Height="0">
+                <TextBlock x:Name="textBlock"/>
             </ScrollViewer>
-            <TextBox x:Name="textBox" Focusable="True" Height="23" Text="" TextChanged="TextBox_TextChanged" PreviewKeyDown="TextBox_PreviewKeyDown" KeyDown="TextBox_KeyDown" Margin="0,0,0,10"/>
+            <TextBox x:Name="textBox" Focusable="True" Height="23" Text="" Margin="0,0,0,10"
+                TextChanged="TextBox_TextChanged" PreviewKeyDown="TextBox_PreviewKeyDown" KeyDown="TextBox_KeyDown" 
+                GotFocus="textBox_GotFocus" LostFocus="textBox_LostFocus" GotKeyboardFocus="textBox_GotKeyboardFocus" LostKeyboardFocus="textBox_LostKeyboardFocus"/>
         </StackPanel>
-        <Button x:Name="button" Content="Build List" Click="Button_Click" HorizontalAlignment="Center" DockPanel.Dock="Bottom"
-                IsEnabled="{Binding ElementName=listBox, Path=SelectedItems.Count}"/>
+        <Button x:Name="button" Content="Build List" HorizontalAlignment="Center" DockPanel.Dock="Bottom"
+                IsEnabled="{Binding ElementName=listBox, Path=SelectedItems.Count}"
+                Click="Button_Click" />
         <ListBox x:Name="listBox" MinHeight="100" SelectionMode="Single" Margin="0,0,0,10" VerticalAlignment="Top">
             <!--<ListBoxItem>AAAA</ListBoxItem>
             <ListBoxItem>ssssssssssssss</ListBoxItem>-->

@@ -90,7 +90,6 @@ namespace QuickFile
                 {
                     foldersCollection.RemoveAt(foldersCollection.Count - 1);
                 }
-                MessageBox.Show("Rebuilding");
             }
 
             // Build or re-build collection
@@ -137,6 +136,7 @@ namespace QuickFile
             taskPane = Globals.ThisAddIn.CustomTaskPanes.Add(wrapper, "Quick Move", explorerOrInspector);
             taskPane.VisibleChanged += new EventHandler(TaskPane_VisibleChanged);
             control = wrapper.taskPaneControl;
+            control.SetUp();
             control.taskPaneContext = this;
 
             if (this.explorer is null)
@@ -151,7 +151,7 @@ namespace QuickFile
             }
         }
 
-        private object explorerOrInspector
+        internal object explorerOrInspector
         {
             get { return explorer == null ? (object)inspector : (object)explorer; }
         }
@@ -164,6 +164,31 @@ namespace QuickFile
                 if (value)
                 {
                     control.textBox.Focus();
+                }
+            }
+        }
+
+        public void MoveSelectedItem(Outlook.Folder folder)
+        {
+            if (explorer != null)
+            {
+                foreach (var selection in explorer.Selection)
+                {
+                    if (selection is Outlook.MailItem)
+                    {
+                        var mailItem = selection as Outlook.MailItem;
+                        mailItem.Move(folder);
+                    }
+                }
+            }
+            else
+            {
+                // Inspector
+                var item = inspector.CurrentItem;
+                if (item is Outlook.MailItem)
+                {
+                    var mailItem = item as Outlook.MailItem;
+                    mailItem.Move(folder);
                 }
             }
         }
@@ -244,8 +269,7 @@ namespace QuickFile
                 p = (p as Outlook.Folder).Parent;
             }
 
-            this.displayName = string.Concat(Enumerable.Repeat(" - ", depth)) + folder.Name;
-            this.displayName = folder.FolderPath;
+            this.displayName = string.Concat(Enumerable.Repeat("  ", depth)) + folder.Name;
 
             //collection.Add(this);
 
@@ -264,7 +288,7 @@ namespace QuickFile
 
         public override String ToString()
         {
-            return displayName + "(" + folder.Class + ")";
+            return displayName;
         }
 
         public void Folders_FolderAdd(Outlook.MAPIFolder new_folder)
@@ -273,7 +297,7 @@ namespace QuickFile
             //children.Insert(0,fw);
             //collection.Insert(collection.IndexOf(this) + 1, fw);
 
-            MessageBox.Show(String.Format("Added {0} folder to {1}.", new_folder.Name, this.folder.Name));
+            //MessageBox.Show(String.Format("Added {0} folder to {1}.", new_folder.Name, this.folder.Name));
 
             Globals.ThisAddIn.UpdateFolderList();
         }
@@ -282,15 +306,12 @@ namespace QuickFile
         {
             // Rename, Add child, or delete child.
             // ********** DEAL WITH RENAME ***************
-            MessageBox.Show(String.Format(
-                //"Changed {0} folder. ", folder.Name));
-                "Changed {0} folder in {1}. ", folder.Name, this.folder.Name));
+            //MessageBox.Show(String.Format("Changed {0} folder in {1}. ", folder.Name, this.folder.Name));
         }
 
         public void Folders_FolderRemove()
         {
-            //MessageBox.Show("Removed a folder.");
-            MessageBox.Show(String.Format("Removed a folder from {0}.", this.folder.Name));
+            //MessageBox.Show(String.Format("Removed a folder from {0}.", this.folder.Name));
 
             // Temp list of remaining folder for search convenience.
             var remainingFolderIds = new List<String>(folders.Count);
@@ -308,7 +329,6 @@ namespace QuickFile
                     return;
                 }
             }
-            MessageBox.Show("Unable to find deleted folder");
 
             Globals.ThisAddIn.UpdateFolderList();
         }

@@ -21,7 +21,6 @@ using System.Windows.Shapes;
 using Outlook = Microsoft.Office.Interop.Outlook;
 
 // TODO:
-// * Multiple panels - https://docs.microsoft.com/en-us/visualstudio/vsto/walkthrough-displaying-custom-task-panes-with-e-mail-messages-in-outlook?view=vs-2019#prerequisites
 // * Improve styling
 // * Guess item from conversation
 // * Toolbar dropdown?
@@ -34,14 +33,18 @@ namespace QuickFile
     public partial class TaskPaneControl : UserControl
     {
 
-        private ThisAddIn addIn;
-        private ListCollectionView listCollectionView;
-        internal TaskPaneContext taskPaneContext;
-
+        private ThisAddIn addIn = null;
+        private ListCollectionView listCollectionView = null;
+        internal TaskPaneContext taskPaneContext = null;
+        
         public TaskPaneControl()
         {
             InitializeComponent();
-            
+        }
+
+        
+        public void SetUp()
+        {
             addIn = Globals.ThisAddIn;
 
             listCollectionView = new ListCollectionView(addIn.foldersCollection);
@@ -49,7 +52,7 @@ namespace QuickFile
             listCollectionView.CustomSort = new SortHelper("");
             listBox.ItemsSource = listCollectionView;
         }
-
+        
         internal void RefreshSelection()
         {
             if (listBox.SelectedIndex < 0)
@@ -57,7 +60,7 @@ namespace QuickFile
                 listBox.SelectedIndex = 0;
             }
         }
-
+        
         private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             TextBox senderTb = sender as TextBox;
@@ -111,7 +114,6 @@ namespace QuickFile
                     str += "Not Mail item.\n\n";
                 }
             }
-            this.textBlock.Text = str;
         }
 
         String EnumerateConversation(object item, Outlook.Conversation conversation)
@@ -264,31 +266,20 @@ namespace QuickFile
 
         private void MoveSelectedItem()
         {
-            //Globals.ThisAddIn.Application.ActiveExplorer().SelectionChange += new Outlook.ExplorerEvents_10_SelectionChangeEventHandler(Explorer_SelectionChange);
-
             var folder = listBox.SelectedItem as FolderWrapper;
             if (folder is null)
             {
                 return;
             }
-
-            var explorer = Globals.ThisAddIn.Application.ActiveExplorer();
-
-            for (int i = 1; i <= explorer.Selection.Count; i++)
-            {
-                var selection = explorer.Selection[i];
-                if (selection is Outlook.MailItem)
-                {
-                    var mailItem = selection as Outlook.MailItem;
-                    mailItem.Move(folder.folder);
-                }
-            }
+            taskPaneContext.MoveSelectedItem(folder.folder);
         }
 
         private void TextBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             int n_item = listBox.Items.Count;
             var i = listBox.SelectedIndex;
+
+            Debug.WriteLine("TextBox PreviewKeydown " + e.Key);
 
             if (n_item == 0)
             {
@@ -313,13 +304,13 @@ namespace QuickFile
                     MoveSelectedItem();
                     break;
                 default:
-                    textBlock.Text += " " + e.Key + "\n";
                     break;
             }
         }
 
         private void TextBox_KeyDown(object sender, KeyEventArgs e)
         {
+            Debug.WriteLine("TextBox Keydown " + e.Key);
             switch (e.Key)
             {
                 case Key.Escape:
@@ -337,9 +328,34 @@ namespace QuickFile
             }
         }
 
-        private void UserControl_Loaded(object sender, RoutedEventArgs e)
+        private void UserControl_KeyDown(object sender, KeyEventArgs e)
         {
-            textBox.Focus();
+            Debug.WriteLine("UserControl_KeyDown " + e.Key);
+        }
+
+        private void UserControl_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            Debug.WriteLine("UserControl_PreviewKeyDown " + e.Key);
+        }
+
+        private void textBox_GotFocus(object sender, RoutedEventArgs e)
+        {
+            Debug.WriteLine("textBox_GotFocus");
+        }
+
+        private void textBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            Debug.WriteLine("textBox_LostFocus");
+        }
+
+        private void textBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            Debug.WriteLine("textBox_GotKeyboardFocus");
+        }
+
+        private void textBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            Debug.WriteLine("textBox_LostKeyboardFocus");
         }
     }
 }
