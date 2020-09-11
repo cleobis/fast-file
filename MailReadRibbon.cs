@@ -21,5 +21,12 @@ namespace QuickFile
             TaskPaneContext taskPaneContext = Globals.ThisAddIn.TaskPaneContexts[inspector];
             taskPaneContext.Visible = ((RibbonToggleButton)sender).Checked;
         }
+
+        private void guessButton_Click(object sender, RibbonControlEventArgs e)
+        {
+            Outlook.Inspector inspector = (Outlook.Inspector)e.Control.Context;
+            TaskPaneContext taskPaneContext = Globals.ThisAddIn.TaskPaneContexts[inspector];
+            taskPaneContext.MoveSelectedItemToBest();
+        }
     }
 }

@@ -20,8 +20,7 @@ namespace QuickFile
     {
         internal ObservableCollection<FolderWrapper> foldersCollection;
         internal FolderWrapper folderTree;
-        internal List<Outlook.Folder> folderBlacklistCache;
-
+        
         public Dictionary<object, TaskPaneContext> TaskPaneContexts = new Dictionary<object, TaskPaneContext>();
         private Outlook.Inspectors inspectors; // So event isn't garbage collected.
         private Outlook.Explorers explorers; // So event isn't garbage collected.
@@ -192,10 +191,11 @@ namespace QuickFile
 
     public class TaskPaneContext
     {
-        private Outlook.Explorer explorer;
-        private Outlook.Inspector inspector;
+        public readonly Outlook.Explorer explorer;
+        public readonly Outlook.Inspector inspector;
         private Microsoft.Office.Tools.CustomTaskPane taskPane;
         private TaskPaneControl control;
+        private FolderWrapper bestFolderWrapper;
 
         public TaskPaneContext(Outlook.Explorer explorer) : this(explorer, null) { }
         public TaskPaneContext(Outlook.Inspector inspector) : this(null, inspector) { }
@@ -220,8 +220,10 @@ namespace QuickFile
             {
                 // Init explorer
                 ((Outlook.ExplorerEvents_10_Event)this.explorer).Close += new Microsoft.Office.Interop.Outlook.ExplorerEvents_10_CloseEventHandler(CloseCallback);
-                ((Outlook.ExplorerEvents_10_Event)this.explorer).SelectionChange += new Microsoft.Office.Interop.Outlook.ExplorerEvents_10_SelectionChangeEventHandler(control.Explorer_SelectionChange);
+                ((Outlook.ExplorerEvents_10_Event)this.explorer).SelectionChange += new Microsoft.Office.Interop.Outlook.ExplorerEvents_10_SelectionChangeEventHandler(Explorer_SelectionChange);
             }
+
+            GuessBestFolder();
         }
 
         internal object explorerOrInspector
@@ -253,6 +255,9 @@ namespace QuickFile
                         mailItem.Move(folder);
                     }
                 }
+
+                // Can't figure out how to close panel so hid it.
+                Visible = false;
             }
             else
             {
@@ -265,11 +270,150 @@ namespace QuickFile
                 }
             }
         }
+        public void MoveSelectedItemToBest()
+        {
+            MoveSelectedItem(bestFolderWrapper.folder);
+        }
 
         public void Refresh()
         {
             control.RefreshSelection();
         }
+
+        internal void GuessBestFolder()
+        {
+            // Which folder contains the most messages from the conversation?
+            Dictionary<String, Tuple<Outlook.Folder, int>> folderVotes = new Dictionary<String, Tuple<Outlook.Folder, int>>();
+            void processItem(dynamic item)
+            {
+                if (item is Outlook.MailItem)
+                {
+                    var mailItem = item as Outlook.MailItem;
+
+                    var conv = mailItem.GetConversation();
+                    if (conv != null)
+                    {
+                        // Obtain root items and enumerate the conversation. 
+                        Outlook.SimpleItems simpleItems = conv.GetRootItems();
+                        EnumerateConversation(simpleItems, conv);
+                    }
+                }
+            }
+            void EnumerateConversation(Outlook.SimpleItems items, Outlook.Conversation conversation)
+            {
+                if (items.Count > 0)
+                {
+                    foreach (object myItem in items)
+                    {
+                        if (myItem is Outlook.MailItem)
+                        {
+                            Outlook.MailItem mailItem = myItem as Outlook.MailItem;
+                            Outlook.Folder inFolder = mailItem.Parent as Outlook.Folder;
+
+                            if (!folderVotes.TryGetValue(inFolder.EntryID, out Tuple<Outlook.Folder, int> value))
+                            {
+                                value = new Tuple<Outlook.Folder, int>(inFolder, 0);
+                            }
+                            folderVotes[inFolder.EntryID] = new Tuple<Outlook.Folder, int>(inFolder, value.Item2 + 1);
+                        }
+                        // Continue recursion. 
+                        EnumerateConversation(conversation.GetChildren(myItem), conversation);
+                    }
+                }
+            }
+            if (explorer != null)
+            {
+                for (int i = 1; i <= explorer.Selection.Count; i++)
+                {
+                    var selection = explorer.Selection[i];
+                    processItem(selection);
+                }
+            }
+            else // inspector
+            {
+                processItem(inspector.CurrentItem);
+            }
+
+            // Remove distracting folders from consideration.
+            var folderBlacklist = Globals.ThisAddIn.GetDefaultFolders(false);
+            if (explorer != null)
+            {
+                folderBlacklist.Add(explorer.CurrentFolder as Outlook.Folder);
+            }
+            else // inspector 
+            {
+                if (inspector.CurrentItem is Outlook.MailItem)
+                {
+                    var mailItem = inspector.CurrentItem as Outlook.MailItem;
+                    if (mailItem.Parent is Outlook.Folder)
+                    {
+                        folderBlacklist.Add(mailItem.Parent as Outlook.Folder);
+                    }
+                }
+            }
+
+            // Select best folder
+            var sortedFolders = folderVotes.OrderBy(key => -key.Value.Item2);
+            Outlook.Folder bestFolder = null;
+            foreach (var v in sortedFolders)
+            {
+                Outlook.Folder folder = v.Value.Item1;
+                if (folderBlacklist.FindIndex(f => f.EntryID == folder.EntryID) >= 0)
+                {
+                    // on blacklist
+                    continue;
+                }
+                bestFolder = folder;
+                break;
+            }
+
+            // Return folder wrapper
+            bestFolderWrapper = null;
+            if (bestFolder != null)
+            {
+                try
+                {
+                    bestFolderWrapper = Globals.ThisAddIn.foldersCollection.Single(fw => fw.folder.EntryID == bestFolder.EntryID);
+                }
+                catch (InvalidOperationException)
+                {
+                    Debug.WriteLine("Unable to find folder " + bestFolder.Name + ".");
+                }
+            }
+
+            // Update Panel
+            control.RefreshSelection(bestFolderWrapper); // null will be ignored.
+
+            // Update Ribbon
+            RibbonButton button = null;
+            if (explorer != null && Globals.Ribbons[explorer].ExplorerRibbon != null)
+            {
+                button = Globals.Ribbons[explorer].ExplorerRibbon.guessButton;
+            }
+            else if (Globals.Ribbons[inspector].MailReadRibbon != null)
+            {
+                button = Globals.Ribbons[inspector].MailReadRibbon.guessButton;
+            }
+            if (button != null)
+            {
+                if (bestFolder == null)
+                {
+                    button.Label = "Move";
+                    button.Enabled = false;
+                }
+                else
+                {
+                    button.Label = bestFolder.Name;
+                    button.Enabled = true;
+                }
+            }
+        }
+
+        public void Explorer_SelectionChange()
+        {
+            GuessBestFolder();
+        }
+
 
         public void CloseCallback()
         {
@@ -279,13 +423,12 @@ namespace QuickFile
             {
                 // Free inspector
                 ((Outlook.InspectorEvents_Event)inspector).Close -= new Outlook.InspectorEvents_CloseEventHandler(CloseCallback);
-                inspector = null;
             }
             else
             {
                 // Free Explorer
                 ((Outlook.ExplorerEvents_10_Event)explorer).Close -= new Microsoft.Office.Interop.Outlook.ExplorerEvents_10_CloseEventHandler(CloseCallback);
-                ((Outlook.ExplorerEvents_10_Event)this.explorer).SelectionChange -= new Microsoft.Office.Interop.Outlook.ExplorerEvents_10_SelectionChangeEventHandler(control.Explorer_SelectionChange);
+                ((Outlook.ExplorerEvents_10_Event)this.explorer).SelectionChange -= new Microsoft.Office.Interop.Outlook.ExplorerEvents_10_SelectionChangeEventHandler(Explorer_SelectionChange);
             }
             
             if (taskPane != null)
@@ -389,7 +532,7 @@ namespace QuickFile
         public void Folders_FolderChange(Outlook.MAPIFolder folder)
         {
             // Rename, Add child, or delete child.
-            MessageBox.Show(String.Format("Changed {0} folder in {1}. ", folder.Name, this.folder.Name));
+            //MessageBox.Show(String.Format("Changed {0} folder in {1}. ", folder.Name, this.folder.Name));
             Globals.ThisAddIn.UpdateFolderList();
         }
 

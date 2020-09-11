@@ -37,7 +37,7 @@
                 TextChanged="TextBox_TextChanged" PreviewKeyDown="TextBox_PreviewKeyDown" KeyDown="TextBox_KeyDown" 
                 GotFocus="textBox_GotFocus" LostFocus="textBox_LostFocus" GotKeyboardFocus="textBox_GotKeyboardFocus" LostKeyboardFocus="textBox_LostKeyboardFocus"/>
         </StackPanel>
-        <Button x:Name="button" Content="Build List" HorizontalAlignment="Center" DockPanel.Dock="Bottom"
+        <Button x:Name="button" Content="Move" HorizontalAlignment="Center" DockPanel.Dock="Bottom"
                 IsEnabled="{Binding ElementName=listBox, Path=SelectedItems.Count}"
                 Click="Button_Click" />
         <ListBox x:Name="listBox" MinHeight="100" SelectionMode="Single" Margin="0,0,0,10" VerticalAlignment="Top">

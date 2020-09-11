@@ -53,9 +53,15 @@ namespace QuickFile
             listBox.ItemsSource = listCollectionView;
         }
         
-        internal void RefreshSelection()
+        internal void RefreshSelection(FolderWrapper folder = null)
         {
             listCollectionView.Refresh();
+
+            if (folder != null)
+            {
+                listBox.SelectedItem = folder;
+            }
+
             if (listBox.SelectedIndex < 0)
             {
                 listBox.SelectedIndex = 0;
@@ -72,86 +78,6 @@ namespace QuickFile
                 if (listBox.SelectedIndex == -1 && listBox.Items.Count > 0)
                 {
                     listBox.SelectedIndex = 0;
-                }
-            }
-        }
-
-        public void Explorer_SelectionChange()
-        {
-            var explorer = Globals.ThisAddIn.Application.ActiveExplorer();
-
-            var folderVotes = new Dictionary<String, Tuple<Outlook.Folder, int>>();
-
-            for (int i = 1; i <= explorer.Selection.Count; i++)
-            {
-                var selection = explorer.Selection[i];
-                if (selection is Outlook.MailItem)
-                {
-                    var mailItem = selection as Outlook.MailItem;
-                    
-                    var conv = mailItem.GetConversation();
-                    if (conv != null)
-                    {
-                        // Obtain root items and enumerate the conversation. 
-                        Outlook.SimpleItems simpleItems = conv.GetRootItems();
-                        EnumerateConversation(simpleItems, conv, folderVotes);
-                    }
-                }
-                else
-                {
-                }
-            }
-
-            // Remove distracting folders from consideration.
-            var folderBlacklist = addIn.GetDefaultFolders(false);
-            folderBlacklist.Add(explorer.CurrentFolder as Outlook.Folder);
-
-            var sortedFolders = folderVotes.OrderBy(key => -key.Value.Item2);
-            Outlook.Folder bestFolder = null;
-            foreach (var v in sortedFolders)
-            {
-                Outlook.Folder folder = v.Value.Item1;
-                if (folderBlacklist.FindIndex(f => f.EntryID == folder.EntryID) >= 0)
-                {
-                    // on blacklist
-                    continue;
-                }
-                bestFolder = folder;
-                break;
-            }
-            if (bestFolder != null)
-            {
-                try
-                {
-                    listBox.SelectedItem = addIn.foldersCollection.Single(fw => fw.folder.EntryID == bestFolder.EntryID);
-                }
-                catch (InvalidOperationException)
-                {
-                    Debug.WriteLine("Unable to find folder " + bestFolder.Name + ".");
-                }
-            }
-        }
-
-        void EnumerateConversation(Outlook.SimpleItems items, Outlook.Conversation conversation, Dictionary<String, Tuple<Outlook.Folder, int>> votes)
-        {
-            String str = "";
-            if (items.Count > 0)
-            {
-                foreach (object myItem in items)
-                {
-                    if (myItem is Outlook.MailItem)
-                    {
-                        Outlook.MailItem mailItem = myItem as Outlook.MailItem;
-                        Outlook.Folder inFolder = mailItem.Parent as Outlook.Folder;
-
-                        if (!votes.TryGetValue(inFolder.EntryID, out Tuple<Outlook.Folder, int> value))
-                        {
-                            value = new Tuple<Outlook.Folder, int>(inFolder, 0);
-                        }
-                        votes[inFolder.EntryID] = new Tuple<Outlook.Folder, int>(inFolder, value.Item2 + 1);
-                    }
-                    // Continue recursion. 
-                    EnumerateConversation(conversation.GetChildren(myItem), conversation, votes);
                 }
             }
         }

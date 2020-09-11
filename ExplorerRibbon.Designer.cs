@@ -36,7 +36,7 @@
         {
             this.tab1 = this.Factory.CreateRibbonTab();
             this.group1 = this.Factory.CreateRibbonGroup();
-            this.button1 = this.Factory.CreateRibbonButton();
+            this.guessButton = this.Factory.CreateRibbonButton();
             this.toggleButton1 = this.Factory.CreateRibbonToggleButton();
             this.tab1.SuspendLayout();
             this.group1.SuspendLayout();
@@ -52,20 +52,21 @@
             // 
             // group1
             // 
-            this.group1.Items.Add(this.button1);
+            this.group1.Items.Add(this.guessButton);
             this.group1.Items.Add(this.toggleButton1);
             this.group1.Label = "Quick File";
             this.group1.Name = "group1";
             // 
-            // button1
+            // guessButton
             // 
-            this.button1.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
-            this.button1.KeyTip = "Z";
-            this.button1.Label = "Go";
-            this.button1.Name = "button1";
-            this.button1.OfficeImageId = "MoveToFolder";
-            this.button1.ShowImage = true;
-            this.button1.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.button1_Click);
+            this.guessButton.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
+            this.guessButton.Enabled = false;
+            this.guessButton.KeyTip = "Z";
+            this.guessButton.Label = "Move";
+            this.guessButton.Name = "guessButton";
+            this.guessButton.OfficeImageId = "MoveToFolder";
+            this.guessButton.ShowImage = true;
+            this.guessButton.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.button1_Click);
             // 
             // toggleButton1
             // 
@@ -94,7 +95,7 @@
 
         internal Microsoft.Office.Tools.Ribbon.RibbonTab tab1;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup group1;
-        internal Microsoft.Office.Tools.Ribbon.RibbonButton button1;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton guessButton;
         internal Microsoft.Office.Tools.Ribbon.RibbonToggleButton toggleButton1;
     }
 

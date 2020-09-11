@@ -17,7 +17,9 @@ namespace QuickFile
 
         private void button1_Click(object sender, RibbonControlEventArgs e)
         {
-
+            Outlook.Explorer explorer = (Outlook.Explorer)e.Control.Context;
+            TaskPaneContext taskPaneContext = Globals.ThisAddIn.TaskPaneContexts[explorer];
+            taskPaneContext.MoveSelectedItemToBest();
         }
 
         private void toggleButton1_Click(object sender, RibbonControlEventArgs e)
