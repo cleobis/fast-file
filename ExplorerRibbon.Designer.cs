@@ -59,15 +59,21 @@
             // 
             // button1
             // 
+            this.button1.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
             this.button1.KeyTip = "Z";
             this.button1.Label = "Go";
             this.button1.Name = "button1";
+            this.button1.OfficeImageId = "MoveToFolder";
+            this.button1.ShowImage = true;
             this.button1.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.button1_Click);
             // 
             // toggleButton1
             // 
-            this.toggleButton1.Label = "toggleButton1";
+            this.toggleButton1.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
+            this.toggleButton1.Label = "Show panel";
             this.toggleButton1.Name = "toggleButton1";
+            this.toggleButton1.OfficeImageId = "ListToolPreviewRight";
+            this.toggleButton1.ShowImage = true;
             this.toggleButton1.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.toggleButton1_Click);
             // 
             // ExplorerRibbon
