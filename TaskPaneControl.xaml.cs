@@ -55,6 +55,7 @@ namespace QuickFile
         
         internal void RefreshSelection()
         {
+            listCollectionView.Refresh();
             if (listBox.SelectedIndex < 0)
             {
                 listBox.SelectedIndex = 0;
@@ -75,51 +76,65 @@ namespace QuickFile
             }
         }
 
-        void Explorer_SelectionChange()
+        public void Explorer_SelectionChange()
         {
             var explorer = Globals.ThisAddIn.Application.ActiveExplorer();
-            String str = "";
 
-            str = String.Format("{0} items selected.\n\n", explorer.Selection.Count);
+            var folderVotes = new Dictionary<String, Tuple<Outlook.Folder, int>>();
+
             for (int i = 1; i <= explorer.Selection.Count; i++)
             {
                 var selection = explorer.Selection[i];
                 if (selection is Outlook.MailItem)
                 {
                     var mailItem = selection as Outlook.MailItem;
-                    str += mailItem.Subject + "\n\n";
-
+                    
                     var conv = mailItem.GetConversation();
                     if (conv != null)
                     {
                         // Obtain root items and enumerate the conversation. 
                         Outlook.SimpleItems simpleItems = conv.GetRootItems();
-                        foreach (object item in simpleItems)
-                        {
-                            if (item is Outlook.MailItem)
-                            {
-                                Outlook.MailItem mail = item as Outlook.MailItem;
-                                Outlook.Folder inFolder = mail.Parent as Outlook.Folder;
-                                string msg = mail.Subject + " in folder " + inFolder.Name;
-                                str += msg + "\n";
-                            }
-                            // Call EnumerateConversation 
-                            // to access child nodes of root items. 
-                            str += EnumerateConversation(item, conv);
-                        }
+                        EnumerateConversation(simpleItems, conv, folderVotes);
                     }
                 }
                 else
                 {
-                    str += "Not Mail item.\n\n";
+                }
+            }
+
+            // Remove distracting folders from consideration.
+            var folderBlacklist = addIn.GetDefaultFolders(false);
+            folderBlacklist.Add(explorer.CurrentFolder as Outlook.Folder);
+
+            var sortedFolders = folderVotes.OrderBy(key => -key.Value.Item2);
+            Outlook.Folder bestFolder = null;
+            foreach (var v in sortedFolders)
+            {
+                Outlook.Folder folder = v.Value.Item1;
+                if (folderBlacklist.FindIndex(f => f.EntryID == folder.EntryID) >= 0)
+                {
+                    // on blacklist
+                    continue;
+                }
+                bestFolder = folder;
+                break;
+            }
+            if (bestFolder != null)
+            {
+                try
+                {
+                    listBox.SelectedItem = addIn.foldersCollection.Single(fw => fw.folder.EntryID == bestFolder.EntryID);
+                }
+                catch (InvalidOperationException)
+                {
+                    Debug.WriteLine("Unable to find folder " + bestFolder.Name + ".");
                 }
             }
         }
 
-        String EnumerateConversation(object item, Outlook.Conversation conversation)
+        void EnumerateConversation(Outlook.SimpleItems items, Outlook.Conversation conversation, Dictionary<String, Tuple<Outlook.Folder, int>> votes)
         {
             String str = "";
-            Outlook.SimpleItems items = conversation.GetChildren(item);
             if (items.Count > 0)
             {
                 foreach (object myItem in items)
@@ -128,15 +143,19 @@ namespace QuickFile
                     {
                         Outlook.MailItem mailItem = myItem as Outlook.MailItem;
                         Outlook.Folder inFolder = mailItem.Parent as Outlook.Folder;
-                        string msg = mailItem.Subject + " in folder " + inFolder.Name;
-                        str += msg + "\n";
+
+                        if (!votes.TryGetValue(inFolder.EntryID, out Tuple<Outlook.Folder, int> value))
+                        {
+                            value = new Tuple<Outlook.Folder, int>(inFolder, 0);
+                        }
+                        votes[inFolder.EntryID] = new Tuple<Outlook.Folder, int>(inFolder, value.Item2 + 1);
                     }
                     // Continue recursion. 
-                    str += EnumerateConversation(myItem, conversation);
+                    EnumerateConversation(conversation.GetChildren(myItem), conversation, votes);
                 }
             }
-            return str;
         }
+
         private bool FilterHelper(object obj)
         {
             var query = textBox.Text;

@@ -18,10 +18,9 @@ namespace QuickFile
 {
     public partial class ThisAddIn
     {
-        internal TaskPaneControlWrapper taskPaneControl;
-        internal Microsoft.Office.Tools.CustomTaskPane customTaskPane;
         internal ObservableCollection<FolderWrapper> foldersCollection;
         internal FolderWrapper folderTree;
+        internal List<Outlook.Folder> folderBlacklistCache;
 
         public Dictionary<object, TaskPaneContext> TaskPaneContexts = new Dictionary<object, TaskPaneContext>();
         private Outlook.Inspectors inspectors; // So event isn't garbage collected.
@@ -74,13 +73,14 @@ namespace QuickFile
 
         public void UpdateFolderList()
         {
+
             if (folderTree is null)
             {
                 Outlook.Folder root = Globals.ThisAddIn.Application.Session.DefaultStore.GetRootFolder() as Outlook.Folder;
                 // or loop over Application.Session.Stores
 
-                folderTree = new FolderWrapper(root, foldersCollection, null);
-                foldersCollection = new ObservableCollection<FolderWrapper>(); //Change to incremental update later *****
+                folderTree = new FolderWrapper(root, null, GetDefaultFolders(false));
+                foldersCollection = new ObservableCollection<FolderWrapper>(); //Change to incremental update later
 
             }
             else
@@ -98,11 +98,83 @@ namespace QuickFile
                 foldersCollection.Add(fw);
             }
 
-            if (!(taskPaneControl is null))
+            // Update selection on control
+            foreach (var pair in TaskPaneContexts)
             {
-                taskPaneControl.taskPaneControl.RefreshSelection();
+                pair.Value.Refresh();
             }
         }
+
+        public List<Outlook.Folder> GetDefaultFolders(bool includeInbox)
+        {
+            var folders = new List<Outlook.Folder>();
+            
+            // https://docs.microsoft.com/en-us/dotnet/api/microsoft.office.interop.outlook.oldefaultfolders?view=outlook-pia
+            // https://stackoverflow.com/questions/972307/how-to-loop-through-all-enum-values-in-c
+            foreach (var folderType in EnumUtil.GetValues<Outlook.OlDefaultFolders>())
+            {
+                switch (folderType)
+                {
+                    // Folders to suppress
+                    case Outlook.OlDefaultFolders.olFolderCalendar:
+                    case Outlook.OlDefaultFolders.olFolderConflicts:
+                    case Outlook.OlDefaultFolders.olFolderContacts:
+                    case Outlook.OlDefaultFolders.olFolderDrafts:
+                    case Outlook.OlDefaultFolders.olFolderJournal:
+                    case Outlook.OlDefaultFolders.olFolderLocalFailures:
+                    case Outlook.OlDefaultFolders.olFolderNotes:
+                    case Outlook.OlDefaultFolders.olFolderOutbox:
+                    case Outlook.OlDefaultFolders.olFolderRssFeeds:
+                    case Outlook.OlDefaultFolders.olFolderSentMail:
+                    case Outlook.OlDefaultFolders.olFolderServerFailures:
+                    case Outlook.OlDefaultFolders.olFolderSyncIssues:
+                    case Outlook.OlDefaultFolders.olFolderTasks:
+                    case Outlook.OlDefaultFolders.olFolderToDo:
+                        try
+                        {
+                            folders.Add(Application.Session.DefaultStore.GetDefaultFolder(folderType) as Outlook.Folder);
+                        } catch (COMException err) {
+                            if (err.ErrorCode != -2147221233) // folder not found
+                            {
+                                throw err;
+                            }
+                        }
+                        break;
+
+                    // Folders to allow
+                    case Outlook.OlDefaultFolders.olFolderDeletedItems:
+                    case Outlook.OlDefaultFolders.olFolderJunk:
+                    case Outlook.OlDefaultFolders.olPublicFoldersAllPublicFolders:
+                        break;
+
+                    // Depends on input argument
+                    case Outlook.OlDefaultFolders.olFolderInbox:
+                        if (includeInbox)
+                        {
+                            try
+                            {
+                                folders.Add(Application.Session.DefaultStore.GetDefaultFolder(folderType) as Outlook.Folder);
+                            }
+                            catch (COMException err)
+                            {
+                                if (err.ErrorCode != 2147221233) // folder not found
+                                {
+                                    throw err;
+                                }
+                            }
+                        }
+                        break;
+
+                    // Folders to do nothing
+                    case Outlook.OlDefaultFolders.olFolderManagedEmail:
+                    case Outlook.OlDefaultFolders.olFolderSuggestedContacts:
+
+                        break;
+                }
+            }
+            return folders;
+        }
+
         #region VSTO generated code
 
         /// <summary>
@@ -148,6 +220,7 @@ namespace QuickFile
             {
                 // Init explorer
                 ((Outlook.ExplorerEvents_10_Event)this.explorer).Close += new Microsoft.Office.Interop.Outlook.ExplorerEvents_10_CloseEventHandler(CloseCallback);
+                ((Outlook.ExplorerEvents_10_Event)this.explorer).SelectionChange += new Microsoft.Office.Interop.Outlook.ExplorerEvents_10_SelectionChangeEventHandler(control.Explorer_SelectionChange);
             }
         }
 
@@ -193,14 +266,14 @@ namespace QuickFile
             }
         }
 
+        public void Refresh()
+        {
+            control.RefreshSelection();
+        }
+
         public void CloseCallback()
         {
-            if (taskPane != null)
-            {
-                Globals.ThisAddIn.CustomTaskPanes.Remove(taskPane);
-            }
-            taskPane = null;
-
+            
             Globals.ThisAddIn.TaskPaneContexts.Remove(explorerOrInspector);
             if (explorer is null)
             {
@@ -212,7 +285,14 @@ namespace QuickFile
             {
                 // Free Explorer
                 ((Outlook.ExplorerEvents_10_Event)explorer).Close -= new Microsoft.Office.Interop.Outlook.ExplorerEvents_10_CloseEventHandler(CloseCallback);
+                ((Outlook.ExplorerEvents_10_Event)this.explorer).SelectionChange -= new Microsoft.Office.Interop.Outlook.ExplorerEvents_10_SelectionChangeEventHandler(control.Explorer_SelectionChange);
             }
+            
+            if (taskPane != null)
+            {
+                Globals.ThisAddIn.CustomTaskPanes.Remove(taskPane);
+            }
+            taskPane = null;
         }
 
         void TaskPane_VisibleChanged(object sender, EventArgs e)
@@ -248,20 +328,19 @@ namespace QuickFile
             - Changed called on old parent
         */
         public Outlook.Folder folder;
-        public String displayName;
         private Outlook.Folders folders; // Have to retain this reference or the events get garbage collected
         public FolderWrapper parent;
         public List<FolderWrapper> children;
-        public ObservableCollection<FolderWrapper> collection;
+        private int depth;
+        public bool stale = false;
 
-        public FolderWrapper(Outlook.Folder folder, ObservableCollection<FolderWrapper> collection, FolderWrapper parent = null)
+        public FolderWrapper(Outlook.Folder folder, FolderWrapper parent = null, List<Outlook.Folder> blacklist = null)
         {
             this.folder = folder;
             this.parent = parent;
-            this.collection = collection;
             this.folders = folder.Folders;
 
-            int depth = 0;
+            depth = 0;
             var p = folder.Parent;
             while (p is Outlook.Folder)
             {
@@ -269,14 +348,14 @@ namespace QuickFile
                 p = (p as Outlook.Folder).Parent;
             }
 
-            this.displayName = string.Concat(Enumerable.Repeat("  ", depth)) + folder.Name;
-
-            //collection.Add(this);
-
             children = new List<FolderWrapper>(folders.Count);
             foreach (Outlook.Folder child in folders)
             {
-                var fw = new FolderWrapper(child as Outlook.Folder, collection, this);
+                if (blacklist != null && blacklist.FindIndex(f => f.EntryID == child.EntryID) >= 0)
+                {
+                    continue;
+                }
+                var fw = new FolderWrapper(child, this, blacklist);
                 children.Add(fw);
             }
 
@@ -288,12 +367,17 @@ namespace QuickFile
 
         public override String ToString()
         {
-            return displayName;
+            return DisplayName;
+        }
+
+        public String DisplayName
+        {
+            get { return string.Concat(Enumerable.Repeat("  ", depth)) + folder.Name; }
         }
 
         public void Folders_FolderAdd(Outlook.MAPIFolder new_folder)
         {
-            FolderWrapper fw = new FolderWrapper(new_folder as Outlook.Folder, collection, this);
+            FolderWrapper fw = new FolderWrapper(new_folder as Outlook.Folder, this, Globals.ThisAddIn.GetDefaultFolders(false));
             //children.Insert(0,fw);
             //collection.Insert(collection.IndexOf(this) + 1, fw);
 
@@ -305,8 +389,8 @@ namespace QuickFile
         public void Folders_FolderChange(Outlook.MAPIFolder folder)
         {
             // Rename, Add child, or delete child.
-            // ********** DEAL WITH RENAME ***************
-            //MessageBox.Show(String.Format("Changed {0} folder in {1}. ", folder.Name, this.folder.Name));
+            MessageBox.Show(String.Format("Changed {0} folder in {1}. ", folder.Name, this.folder.Name));
+            Globals.ThisAddIn.UpdateFolderList();
         }
 
         public void Folders_FolderRemove()
@@ -320,11 +404,10 @@ namespace QuickFile
                 remainingFolderIds.Add(f.EntryID);
             }
 
-            for (int i = 0; i < children.Count; i++)
+            for (int i = children.Count; i >= 0; i--)
             {
                 if (!remainingFolderIds.Contains(children[i].folder.EntryID))
                 {
-                    //RemoveChild(i);
                     children.RemoveAt(i);
                     return;
                 }
@@ -332,17 +415,6 @@ namespace QuickFile
 
             Globals.ThisAddIn.UpdateFolderList();
         }
-
-        /*public void RemoveChild(int i)
-        {
-            var child = children[i];
-            for (int j = child.children.Count - 1; j >= 0; j--)
-            {
-                child.RemoveChild(j);
-            }
-            collection.Remove(child);
-            children.RemoveAt(i);
-        }*/
 
         public IEnumerable<FolderWrapper> Flattened()
         {
@@ -533,5 +605,13 @@ namespace QuickFile
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr GetModuleHandle(string lpModuleName);
 
+    }
+
+    public static class EnumUtil
+    {
+        public static IEnumerable<T> GetValues<T>()
+        {
+            return Enum.GetValues(typeof(T)).Cast<T>();
+        }
     }
 }
