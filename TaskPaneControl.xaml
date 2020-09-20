@@ -41,6 +41,12 @@
                 IsEnabled="{Binding ElementName=listBox, Path=SelectedItems.Count}"
                 Click="Button_Click" />
         <ListBox x:Name="listBox" MinHeight="100" SelectionMode="Single" Margin="0,0,0,10" VerticalAlignment="Top">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="{x:Type ListBoxItem}">
+                    <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+                </Style>
+            </ListBox.ItemContainerStyle>
             <!--<ListBoxItem>AAAA</ListBoxItem>
             <ListBoxItem>ssssssssssssss</ListBoxItem>-->
         </ListBox>
