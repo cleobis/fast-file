@@ -245,29 +245,9 @@ namespace QuickFile
 
         public void MoveSelectedItem(Outlook.Folder folder)
         {
-            if (explorer != null)
+            foreach (Outlook.MailItem mailItem in GetSelectedMailItems())
             {
-                foreach (var selection in explorer.Selection)
-                {
-                    if (selection is Outlook.MailItem)
-                    {
-                        var mailItem = selection as Outlook.MailItem;
-                        mailItem.Move(folder);
-                    }
-                }
-
-                // Can't figure out how to close panel so hid it.
-                Visible = false;
-            }
-            else
-            {
-                // Inspector
-                var item = inspector.CurrentItem;
-                if (item is Outlook.MailItem)
-                {
-                    var mailItem = item as Outlook.MailItem;
-                    mailItem.Move(folder);
-                }
+                mailItem.Move(folder);
             }
         }
         public void MoveSelectedItemToBest()
@@ -284,19 +264,14 @@ namespace QuickFile
         {
             // Which folder contains the most messages from the conversation?
             Dictionary<String, Tuple<Outlook.Folder, int>> folderVotes = new Dictionary<String, Tuple<Outlook.Folder, int>>();
-            void processItem(dynamic item)
+            void processItem(Outlook.MailItem mailItem)
             {
-                if (item is Outlook.MailItem)
+                var conv = mailItem.GetConversation();
+                if (conv != null)
                 {
-                    var mailItem = item as Outlook.MailItem;
-
-                    var conv = mailItem.GetConversation();
-                    if (conv != null)
-                    {
-                        // Obtain root items and enumerate the conversation. 
-                        Outlook.SimpleItems simpleItems = conv.GetRootItems();
-                        EnumerateConversation(simpleItems, conv);
-                    }
+                    // Obtain root items and enumerate the conversation. 
+                    Outlook.SimpleItems simpleItems = conv.GetRootItems();
+                    EnumerateConversation(simpleItems, conv);
                 }
             }
             void EnumerateConversation(Outlook.SimpleItems items, Outlook.Conversation conversation)
@@ -321,17 +296,8 @@ namespace QuickFile
                     }
                 }
             }
-            if (explorer != null)
-            {
-                for (int i = 1; i <= explorer.Selection.Count; i++)
-                {
-                    var selection = explorer.Selection[i];
-                    processItem(selection);
-                }
-            }
-            else // inspector
-            {
-                processItem(inspector.CurrentItem);
+            foreach (Outlook.MailItem mailItem in GetSelectedMailItems()) {
+                processItem(mailItem);
             }
 
             // Remove distracting folders from consideration.
@@ -405,6 +371,48 @@ namespace QuickFile
                 {
                     button.Label = bestFolder.Name;
                     button.Enabled = true;
+                }
+            }
+        }
+
+        public IEnumerable<Outlook.MailItem> GetSelectedMailItems()
+        {
+            if (inspector != null)
+            {
+                if (inspector.CurrentItem is Outlook.MailItem)
+                {
+                    yield return inspector.CurrentItem as Outlook.MailItem;
+                }
+            }
+            else // (explorer != null)
+            {
+                var headers = explorer.Selection.GetSelection(Outlook.OlSelectionContents.olConversationHeaders);
+                if (headers.Count > 0) {
+                    // If they are in conversation view, need to iterate through the conversations in case they have the header selected. Only returns items in the current folder which is what we want.
+                    foreach (Outlook.ConversationHeader header in headers)
+                    {
+                        Outlook.SimpleItems items = header.GetItems();
+                        for (int i = 1; i <= items.Count; i++)
+                        {
+                            // Enumerate only MailItems in this example.
+                            if (items[i] is Outlook.MailItem)
+                            {
+                                yield return items[i] as Outlook.MailItem;
+                            }
+                        }
+                    }
+                } 
+                else
+                {
+                    // If we are not in conversation view, process selection directly
+                    for (int i = 1; i <= explorer.Selection.Count; i++)
+                    {
+                        var selection = explorer.Selection[i];
+                        if (selection is Outlook.MailItem)
+                        {
+                            yield return selection as Outlook.MailItem;
+                        }
+                    }
                 }
             }
         }
