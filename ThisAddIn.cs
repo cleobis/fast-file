@@ -13,6 +13,8 @@ using System.Security.AccessControl;
 using System.Collections.ObjectModel;
 using Microsoft.Office.Core;
 using Microsoft.Office.Tools.Ribbon;
+using System.Threading;
+using System.Windows.Threading;
 
 namespace QuickFile
 {
@@ -172,6 +174,12 @@ namespace QuickFile
                 }
             }
             return folders;
+        }
+
+        public void RehookKeyboard()
+        {
+            interceptKeys.Detach();
+            interceptKeys.Attach();
         }
 
         #region VSTO generated code
@@ -589,13 +597,6 @@ namespace QuickFile
         private LowLevelKeyboardProc _proc;
         private IntPtr _hookID = IntPtr.Zero;
 
-        private bool LeftCtrl = false;
-        private bool RightCtrl = false;
-        private bool LeftAlt = false;
-        private bool RightAlt = false;
-        private bool LeftShift = false;
-        private bool RightShift = false;
-
         public InterceptKeys()
         {
             _proc = HookCallback;
@@ -609,7 +610,6 @@ namespace QuickFile
         {
             if (_hookID != IntPtr.Zero)
             {
-                Debug.WriteLine("Already attached.");
                 return false;
             }
             _hookID = SetHook(_proc);
@@ -621,8 +621,9 @@ namespace QuickFile
         {
             if (_hookID != IntPtr.Zero)
             {
-                UnhookWindowsHookEx(_hookID);
+                bool check = UnhookWindowsHookEx(_hookID);
                 _hookID = IntPtr.Zero;
+                Debug.WriteLine("Detaching hook. Return was " + check);
             }
         }
 
@@ -640,34 +641,62 @@ namespace QuickFile
 
         private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            // Calls once n = 3 (call to peek), then n = 0 (calls to get the key)
+            // Calls twice n = 3 (call to peek), then once n = 0 (calls to get the key). Calls for key down, key repeat, and key up
+            //
+            // Seeing issues where the hook stops responding after a while. Suspect the OS is unhooking due to slow execution. Trying to mitigate by pushing the actual work back on the Dispatcher queue rather than doing within the HookCallback.
+            if (nCode < 0)
+            {
+                return CallNextHookEx(_hookID, nCode, wParam, lParam);
+            }
 
             var key = KeyInterop.KeyFromVirtualKey((int)wParam);
             var flags = new KeystrokeFlags(lParam);
+
+            // We only care about the first key down. We don't want repeats or key ups.
+            // nCode == 0 is the actual key press, not the peak which could happen multiple times.
+            if (!(flags.WasUp && flags.IsDown && nCode == 0))
+            {
+                return CallNextHookEx(_hookID, nCode, wParam, lParam);
+            }
+
             switch (key)
             {
-                case Key.LeftCtrl:
-                    LeftCtrl = flags.IsDown;
-                    break;
-                case Key.RightCtrl:
-                    RightCtrl = flags.IsDown;
-                    break;
-                case Key.LeftShift:
-                    LeftShift = flags.IsDown;
-                    break;
-                case Key.RightShift:
-                    RightShift = flags.IsDown;
-                    break;
-                case Key.LeftAlt:
-                    LeftAlt = flags.IsDown;
-                    break;
-                case Key.RightAlt:
-                    RightAlt = flags.IsDown;
+                case Key.D1:
+                    Debug.WriteLine("Got D1. Modifiers = " + Keyboard.Modifiers + ", key = " + key + ", flags = " + flags);
+                    if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
+                    {
+                        // Ctrl+Shfit+1 => Show GUI
+                        Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() => {
+                            var context = GetActiveContext();
+                            if (context != null)
+                            {
+                                context.Visible = true;
+                            }
+                        }));
+                        return IntPtr.Zero + 1;
+                    }
+                    else if (Keyboard.Modifiers == ModifierKeys.Control)
+                    {
+                        // Ctrl+1 => Move selected item to best guess
+                        Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() => {
+                            GetActiveContext()?.MoveSelectedItemToBest();
+                        }));
+                        return IntPtr.Zero + 1;
+                    }
                     break;
                 case Key.V:
-                    if ((LeftCtrl || RightCtrl) && (LeftShift || RightShift) && !(LeftAlt || RightAlt) && flags.IsDown)
+
+                    Debug.WriteLine("Got v. Modifiers = " + Keyboard.Modifiers + ", key = " + key + ", flags = " + flags);
+                    if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
                     {
-                        ShowGUI();
+                        // Ctrl+Shfit+V => Show GUI
+                        Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() => {
+                            var context = GetActiveContext();
+                            if (context != null)
+                            {
+                                context.Visible = true;
+                            }
+                        }));
                         return IntPtr.Zero + 1;
                     }
                     break;
@@ -676,14 +705,10 @@ namespace QuickFile
             return CallNextHookEx(_hookID, nCode, wParam, lParam);
         }
 
-        private void ShowGUI()
+        private TaskPaneContext GetActiveContext()
         {
             var window = Globals.ThisAddIn.Application.ActiveWindow();
-            var context = Globals.ThisAddIn.TaskPaneContexts[window];
-            if (context != null)
-            {
-                context.Visible = true;
-            }
+            return Globals.ThisAddIn.TaskPaneContexts[window];
         }
 
         internal struct KeystrokeFlags

@@ -38,6 +38,7 @@
             this.group1 = this.Factory.CreateRibbonGroup();
             this.guessButton = this.Factory.CreateRibbonButton();
             this.toggleButton1 = this.Factory.CreateRibbonToggleButton();
+            this.buttonRehook = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
             this.group1.SuspendLayout();
             this.SuspendLayout();
@@ -54,6 +55,7 @@
             // 
             this.group1.Items.Add(this.guessButton);
             this.group1.Items.Add(this.toggleButton1);
+            this.group1.Items.Add(this.buttonRehook);
             this.group1.Label = "Quick File";
             this.group1.Name = "group1";
             // 
@@ -77,6 +79,12 @@
             this.toggleButton1.ShowImage = true;
             this.toggleButton1.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.toggleButton1_Click);
             // 
+            // buttonRehook
+            // 
+            this.buttonRehook.Label = "Rehook";
+            this.buttonRehook.Name = "buttonRehook";
+            this.buttonRehook.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.buttonRehook_Click);
+            // 
             // ExplorerRibbon
             // 
             this.Name = "ExplorerRibbon";
@@ -97,6 +105,7 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup group1;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton guessButton;
         internal Microsoft.Office.Tools.Ribbon.RibbonToggleButton toggleButton1;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton buttonRehook;
     }
 
     partial class ThisRibbonCollection

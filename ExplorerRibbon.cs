@@ -28,5 +28,10 @@ namespace QuickFile
             TaskPaneContext taskPaneContext = Globals.ThisAddIn.TaskPaneContexts[explorer];
             taskPaneContext.Visible = ((RibbonToggleButton)sender).Checked;
         }
+
+        private void buttonRehook_Click(object sender, RibbonControlEventArgs e)
+        {
+            Globals.ThisAddIn.RehookKeyboard();
+        }
     }
 }
