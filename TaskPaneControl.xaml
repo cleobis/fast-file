@@ -40,7 +40,8 @@
         <Button x:Name="button" Content="Move" HorizontalAlignment="Center" DockPanel.Dock="Bottom"
                 IsEnabled="{Binding ElementName=listBox, Path=SelectedItems.Count}"
                 Click="Button_Click" />
-        <ListBox x:Name="listBox" MinHeight="100" SelectionMode="Single" Margin="0,0,0,10" VerticalAlignment="Top">
+        <ListBox x:Name="listBox" MinHeight="100" SelectionMode="Single" Margin="0,0,0,10" VerticalAlignment="Top" 
+                 MouseDoubleClick="listBox_MouseDoubleClick">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="{x:Type ListBoxItem}">
                     <Setter Property="HorizontalContentAlignment" Value="Left"/>

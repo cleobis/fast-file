@@ -254,16 +254,18 @@ namespace QuickFile
                     {
                         listBox.SelectedIndex = i - 1;
                     }
+                    e.Handled = true;
                     break;
                 case Key.Down:
                     if (i < n_item - 1)
                     {
                         listBox.SelectedIndex = i + 1;
                     }
+                    e.Handled = true;
                     break;
-                case Key.Enter:
+                /*case Key.Enter:
                     MoveSelectedItem();
-                    break;
+                    break;*/
                 default:
                     break;
             }
@@ -278,10 +280,11 @@ namespace QuickFile
                     if (textBox.Text != "")
                     {
                         textBox.Text = "";
+                        e.Handled = true;
                     }
                     else
                     {
-                        taskPaneContext.Visible = false;
+                        //taskPaneContext.Visible = false;
                     }
                     break;
                 default:
@@ -292,8 +295,31 @@ namespace QuickFile
         private void UserControl_KeyDown(object sender, KeyEventArgs e)
         {
             Debug.WriteLine("UserControl_KeyDown " + e.Key);
+            switch (e.Key)
+            {
+                case Key.Escape:
+                    taskPaneContext.Visible = false;
+                    break;
+                case Key.Enter:
+                    MoveSelectedItem();
+                    break;
+                default:
+                    break;
+            }
         }
-
+        private void listBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            try
+            {
+                MoveSelectedItem();
+            }
+            catch (System.Exception err)
+            {
+                MessageBox.Show("Unexpected error double click.\n" + err.Message, "Fast File Error");
+                Debug.WriteLine("Unexpected error double click.\n" + err.Message + $"\n{err}");
+            }
+        }
+        
         private void UserControl_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             Debug.WriteLine("UserControl_PreviewKeyDown " + e.Key);
