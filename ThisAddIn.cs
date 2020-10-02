@@ -532,6 +532,10 @@ namespace QuickFile
                 toggleButton = Globals.Ribbons[inspector].MailReadRibbon.toggleButton1;
             }
             toggleButton.Checked = taskPane.Visible;
+            if (!taskPane.Visible)
+            {
+                control.textBox.Text = "";
+            }
         }
     }
 
