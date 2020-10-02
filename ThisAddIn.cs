@@ -242,11 +242,22 @@ namespace QuickFile
         public bool Visible
         {
             get { return taskPane.Visible; }
-            set { 
+            set {
+                bool changed = taskPane.Visible != value;
                 taskPane.Visible = value;
                 if (value)
                 {
                     control.textBox.Focus();
+                }
+                else
+                {
+                    if (changed)
+                    {
+                        // Fix focus bug
+                        var id = GetForegroundWindow();
+                        SetForegroundWindow(GetDesktopWindow());
+                        SetForegroundWindow(id);
+                    }
                 }
             }
         }
@@ -544,6 +555,16 @@ namespace QuickFile
                 control.textBox.Text = "";
             }
         }
+
+        [DllImport("user32.dll", SetLastError = false)]
+        static extern IntPtr GetDesktopWindow();
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        static extern IntPtr GetForegroundWindow();
     }
 
     class FolderWrapper
