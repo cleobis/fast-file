@@ -274,7 +274,16 @@ namespace QuickFile
             Dictionary<String, Tuple<Outlook.Folder, int>> folderVotes = new Dictionary<String, Tuple<Outlook.Folder, int>>();
             void processItem(Outlook.MailItem mailItem)
             {
-                var conv = mailItem.GetConversation();
+                Outlook.Conversation conv = null;
+                try
+                {
+                    conv = mailItem.GetConversation();
+                }
+                catch (COMException err)
+                {
+                    //It's supposed to return null if there is no converstaion but actually throws and exception
+                }
+
                 if (conv != null)
                 {
                     // Obtain root items and enumerate the conversation. 
@@ -300,7 +309,19 @@ namespace QuickFile
                             folderVotes[inFolder.EntryID] = new Tuple<Outlook.Folder, int>(inFolder, value.Item2 + 1);
                         }
                         // Continue recursion. 
-                        EnumerateConversation(conversation.GetChildren(myItem), conversation);
+                        Outlook.SimpleItems children;
+                        try
+                        {
+                            children = conversation.GetChildren(myItem);
+                        }
+                        catch (COMException err)
+                        {
+                            var subject = myItem is Outlook.MailItem ? (myItem as Outlook.MailItem).Subject : "<Unknown item>";
+                            Debug.WriteLine("Unable to get conversation children for " + subject);
+                            // I see this with Drafts, meeting invites, and other times.
+                            continue;
+                        }
+                        EnumerateConversation(children, conversation);
                     }
                 }
             }
@@ -394,12 +415,37 @@ namespace QuickFile
             }
             else // (explorer != null)
             {
-                var headers = explorer.Selection.GetSelection(Outlook.OlSelectionContents.olConversationHeaders);
-                if (headers.Count > 0) {
+                Outlook.Selection headers = null;
+                try
+                {
+                    headers = explorer.Selection.GetSelection(Outlook.OlSelectionContents.olConversationHeaders);
+                }
+                catch (COMException err)
+                {
+                    // ^ failed once when moving only part of the message.
+                    Debug.WriteLine("Error with GetSelection().");
+                }
+
+
+                if (headers != null && headers.Count > 0)
+                {
                     // If they are in conversation view, need to iterate through the conversations in case they have the header selected. Only returns items in the current folder which is what we want.
                     foreach (Outlook.ConversationHeader header in headers)
                     {
-                        Outlook.SimpleItems items = header.GetItems();
+                        // System.Runtime.InteropServices.COMException
+                        // Message = The operation failed.
+                        // after ?moving? a conversation and definitely after ?deleting? a conversation.
+                        Outlook.SimpleItems items = null;
+                        try
+                        {
+                            items = header.GetItems();
+                        }
+                        catch (COMException err)
+                        {
+                            // Seen after move sometimes
+                            Debug.WriteLine("COMException in header.GetItems(). " + err.Message);
+                            continue;
+                        }
                         for (int i = 1; i <= items.Count; i++)
                         {
                             // Enumerate only MailItems in this example.
@@ -409,16 +455,28 @@ namespace QuickFile
                             }
                         }
                     }
-                } 
+                }
                 else
                 {
                     // If we are not in conversation view, process selection directly
-                    for (int i = 1; i <= explorer.Selection.Count; i++)
+                    Outlook.Selection selection = null;
+                    try
                     {
-                        var selection = explorer.Selection[i];
-                        if (selection is Outlook.MailItem)
+                        selection = explorer.Selection;
+                    }
+                    catch (COMException err)
+                    {
+                        Debug.WriteLine("ComException in explorer.Selection." + err.Message);
+                    }
+                    if (selection != null)
+                    {
+                        for (int i = 1; i <= selection.Count; i++)
                         {
-                            yield return selection as Outlook.MailItem;
+                            var selectionItem = selection[i];
+                            if (selectionItem is Outlook.MailItem)
+                            {
+                                yield return selectionItem as Outlook.MailItem;
+                            }
                         }
                     }
                 }
@@ -427,7 +485,15 @@ namespace QuickFile
 
         public void Explorer_SelectionChange()
         {
-            GuessBestFolder();
+            try
+            {
+                GuessBestFolder();
+            }
+            catch (Exception err)
+            {
+                MessageBox.Show("Unexpected error processing Selection Change.\n" + err.Message,"Fast File Error");
+                Debug.WriteLine("Unexpected error processing Selection Change.\n" + err.Message + $"\n{err}");
+            }
         }
 
 
@@ -536,43 +602,72 @@ namespace QuickFile
 
         public void Folders_FolderAdd(Outlook.MAPIFolder new_folder)
         {
-            FolderWrapper fw = new FolderWrapper(new_folder as Outlook.Folder, this, Globals.ThisAddIn.GetDefaultFolders(false));
-            //children.Insert(0,fw);
-            //collection.Insert(collection.IndexOf(this) + 1, fw);
+            try
+            {
+                Debug.WriteLine("FolderAdd Starting");
 
-            //MessageBox.Show(String.Format("Added {0} folder to {1}.", new_folder.Name, this.folder.Name));
+                FolderWrapper fw = new FolderWrapper(new_folder as Outlook.Folder, this, Globals.ThisAddIn.GetDefaultFolders(false));
+                //children.Insert(0,fw);
+                //collection.Insert(collection.IndexOf(this) + 1, fw);
 
-            Globals.ThisAddIn.UpdateFolderList();
-        }
+                Globals.ThisAddIn.UpdateFolderList();
+
+                Debug.WriteLine("FolderAdd Done.");
+            }
+            catch (Exception err)
+            {
+                MessageBox.Show("Unexpected error processing FolderAdd.\n" + err.Message,"Fast File Error");
+                Debug.WriteLine("Unexpected error processing FolderAdd.\n" + err.Message + $"\n{err}");
+            }
+}
 
         public void Folders_FolderChange(Outlook.MAPIFolder folder)
         {
-            // Rename, Add child, or delete child.
-            //MessageBox.Show(String.Format("Changed {0} folder in {1}. ", folder.Name, this.folder.Name));
-            Globals.ThisAddIn.UpdateFolderList();
-        }
+            try
+            { 
+
+            }
+            catch (Exception err)
+            {
+                MessageBox.Show("Unexpected error processing FolderChange.\n" + err.Message,"Fast File Error");
+                Debug.WriteLine("Unexpected error processing FolderChange.\n" + err.Message + $"\n{err}");
+            }
+    // Rename, Add child, or delete child.
+    // TODO: THIS IS TOO SLOW TO HAVE ENABLED. NEED TO FIX.
+    //Globals.ThisAddIn.UpdateFolderList();
+}
 
         public void Folders_FolderRemove()
         {
-            //MessageBox.Show(String.Format("Removed a folder from {0}.", this.folder.Name));
-
-            // Temp list of remaining folder for search convenience.
-            var remainingFolderIds = new List<String>(folders.Count);
-            foreach (Outlook.Folder f in folders)
+            try
             {
-                remainingFolderIds.Add(f.EntryID);
-            }
+                Debug.WriteLine("FolderRemove Starting");
 
-            for (int i = children.Count; i >= 0; i--)
-            {
-                if (!remainingFolderIds.Contains(children[i].folder.EntryID))
+                // Temp list of remaining folder for search convenience.
+                var remainingFolderIds = new List<String>(folders.Count);
+                foreach (Outlook.Folder f in folders)
                 {
-                    children.RemoveAt(i);
-                    return;
+                    remainingFolderIds.Add(f.EntryID);
                 }
-            }
 
-            Globals.ThisAddIn.UpdateFolderList();
+                for (int i = children.Count; i >= 0; i--)
+                {
+                    if (!remainingFolderIds.Contains(children[i].folder.EntryID))
+                    {
+                        children.RemoveAt(i);
+                        return;
+                    }
+                }
+
+                Globals.ThisAddIn.UpdateFolderList();
+
+                Debug.WriteLine("FolderRemove Done");
+            }
+            catch (Exception err)
+            {
+                MessageBox.Show("Unexpected error processing FolderRemove.\n" + err.Message, "Fast File Error");
+                Debug.WriteLine("Unexpected error processing FolderRemove.\n" + err.Message + $"\n{err}");
+            }
         }
 
         public IEnumerable<FolderWrapper> Flattened()
@@ -667,10 +762,18 @@ namespace QuickFile
                     {
                         // Ctrl+Shfit+1 => Show GUI
                         Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() => {
-                            var context = GetActiveContext();
-                            if (context != null)
+                            try
                             {
-                                context.Visible = true;
+                                var context = GetActiveContext();
+                                if (context != null)
+                                {
+                                    context.Visible = true;
+                                }
+                            }
+                            catch (Exception err)
+                            {
+                                MessageBox.Show("Unexpected error processing Ctrl+Shift+1.\n" + err.Message, "Fast File Error");
+                                Debug.WriteLine("Unexpected error processing Ctrl+Shift+1.\n" + err.Message + $"\n{err}");
                             }
                         }));
                         return IntPtr.Zero + 1;
@@ -679,8 +782,16 @@ namespace QuickFile
                     {
                         // Ctrl+1 => Move selected item to best guess
                         Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() => {
-                            GetActiveContext()?.MoveSelectedItemToBest();
-                        }));
+                            try
+                            {
+                                GetActiveContext()?.MoveSelectedItemToBest();
+                            }
+                            catch (Exception err)
+                            {
+                                MessageBox.Show("Unexpected error processing Ctrl+1.\n" + err.Message, "Fast File Error");
+                                Debug.WriteLine("Unexpected error processing Ctrl+1.\n" + err.Message + $"\n{err}");
+                            }
+                    }));
                         return IntPtr.Zero + 1;
                     }
                     break;
@@ -691,10 +802,18 @@ namespace QuickFile
                     {
                         // Ctrl+Shfit+V => Show GUI
                         Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() => {
-                            var context = GetActiveContext();
-                            if (context != null)
+                            try
                             {
-                                context.Visible = true;
+                                var context = GetActiveContext();
+                                if (context != null)
+                                {
+                                    context.Visible = true;
+                                }
+                            }
+                            catch (Exception err)
+                            {
+                                MessageBox.Show("Unexpected error processing Ctrl+Shift+V.\n" + err.Message, "Fast File Error");
+                                Debug.WriteLine("Unexpected error processing Ctrl+Shift+V.\n" + err.Message + $"\n{err}");
                             }
                         }));
                         return IntPtr.Zero + 1;

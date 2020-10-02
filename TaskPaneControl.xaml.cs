@@ -70,15 +70,23 @@ namespace QuickFile
         
         private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            TextBox senderTb = sender as TextBox;
-
-            if (!(listBox is null))
+            try
             {
-                listCollectionView.Refresh();
-                if (listBox.SelectedIndex == -1 && listBox.Items.Count > 0)
+                TextBox senderTb = sender as TextBox;
+
+                if (!(listBox is null))
                 {
-                    listBox.SelectedIndex = 0;
+                    listCollectionView.Refresh();
+                    if (listBox.SelectedIndex == -1 && listBox.Items.Count > 0)
+                    {
+                        listBox.SelectedIndex = 0;
+                    }
                 }
+            }
+            catch (System.Exception err)
+            {
+                MessageBox.Show("Unexpected error processing TextBox_TextChanged.\n" + err.Message, "Fast File Error");
+                Debug.WriteLine("Unexpected error processing TextBox_TextChanged.\n" + err.Message + $"\n{err}");
             }
         }
 
@@ -206,7 +214,15 @@ namespace QuickFile
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            MoveSelectedItem();
+            try
+            {
+                MoveSelectedItem();
+            }
+            catch (System.Exception err)
+            {
+                MessageBox.Show("Unexpected error processing burron.\n" + err.Message, "Fast File Error");
+                Debug.WriteLine("Unexpected error processing button.\n" + err.Message + $"\n{err}");
+            }
         }
 
         private void MoveSelectedItem()
