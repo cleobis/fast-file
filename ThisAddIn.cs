@@ -260,7 +260,14 @@ namespace QuickFile
         }
         public void MoveSelectedItemToBest()
         {
-            MoveSelectedItem(bestFolderWrapper.folder);
+            if (bestFolderWrapper is null)
+            {
+                Debug.WriteLine("No best folder.");
+            }
+            else
+            {
+                MoveSelectedItem(bestFolderWrapper.folder);
+            }
         }
 
         public void Refresh()
