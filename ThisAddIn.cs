@@ -248,12 +248,17 @@ namespace QuickFile
                 if (value)
                 {
                     control.textBox.Focus();
+
+                    // Fix escape key capturing
+                    var id = GetForegroundWindow();
+                    SetForegroundWindow(GetDesktopWindow());
+                    SetForegroundWindow(id);
                 }
                 else
                 {
                     if (changed)
                     {
-                        // Fix focus bug
+                        // Fix focus not returned to mesage list in explorer
                         var id = GetForegroundWindow();
                         SetForegroundWindow(GetDesktopWindow());
                         SetForegroundWindow(id);
