@@ -233,6 +233,7 @@ namespace QuickFile
                 return;
             }
             taskPaneContext.MoveSelectedItem(folder.folder);
+            taskPaneContext.Visible = false;
         }
 
         private void TextBox_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -299,9 +300,11 @@ namespace QuickFile
             {
                 case Key.Escape:
                     taskPaneContext.Visible = false;
+                    e.Handled = true;
                     break;
                 case Key.Enter:
                     MoveSelectedItem();
+                    e.Handled = true;
                     break;
                 default:
                     break;
