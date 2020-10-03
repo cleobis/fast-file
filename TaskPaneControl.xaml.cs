@@ -55,7 +55,7 @@ namespace QuickFile
         
         internal void RefreshSelection(FolderWrapper folder = null)
         {
-            listCollectionView.Refresh();
+            //listCollectionView.Refresh();
 
             if (folder != null)
             {
