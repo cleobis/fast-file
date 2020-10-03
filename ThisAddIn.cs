@@ -203,7 +203,8 @@ namespace QuickFile
         public readonly Outlook.Inspector inspector;
         private Microsoft.Office.Tools.CustomTaskPane taskPane;
         private TaskPaneControl control;
-        private FolderWrapper bestFolderWrapper;
+        private FolderWrapper _bestFolderWrapper;
+        private bool guessBestFolderQueued = false;
 
         public TaskPaneContext(Outlook.Explorer explorer) : this(explorer, null) { }
         public TaskPaneContext(Outlook.Inspector inspector) : this(null, inspector) { }
@@ -238,7 +239,38 @@ namespace QuickFile
         {
             get { return explorer == null ? (object)inspector : (object)explorer; }
         }
+        
+        private void UpdateBestFolderWrapper(FolderWrapper value)
+        {
+            _bestFolderWrapper = value;
+            // Update Panel
+            control.RefreshSelection(_bestFolderWrapper); // null will be ignored.
 
+            // Update Ribbon
+            RibbonButton button = null;
+            if (explorer != null && Globals.Ribbons[explorer].ExplorerRibbon != null)
+            {
+                button = Globals.Ribbons[explorer].ExplorerRibbon.guessButton;
+            }
+            else if (Globals.Ribbons[inspector].MailReadRibbon != null)
+            {
+                button = Globals.Ribbons[inspector].MailReadRibbon.guessButton;
+            }
+            if (button != null)
+            {
+                if (_bestFolderWrapper?.folder == null)
+                {
+                    button.Label = "Move";
+                    button.Enabled = false;
+                }
+                else
+                {
+                    button.Label = _bestFolderWrapper.folder.Name;
+                    button.Enabled = true;
+                }
+            }
+        }
+        
         public bool Visible
         {
             get { return taskPane.Visible; }
@@ -274,15 +306,16 @@ namespace QuickFile
                 mailItem.Move(folder);
             }
         }
+        
         public void MoveSelectedItemToBest()
         {
-            if (bestFolderWrapper is null)
+            if (_bestFolderWrapper is null)
             {
                 Debug.WriteLine("No best folder.");
             }
             else
             {
-                MoveSelectedItem(bestFolderWrapper.folder);
+                MoveSelectedItem(_bestFolderWrapper.folder);
             }
         }
 
@@ -291,6 +324,32 @@ namespace QuickFile
             control.RefreshSelection();
         }
 
+        internal void GuessBestFolderAsync()
+        {
+            UpdateBestFolderWrapper(null);
+            // The Explorer selection changed event fires twice if the reading 
+            // pane is open. By pushing our response back into the message queue,
+            // we can consolidate and only update once. Using Background priority
+            // means that the reading pane render will happen first.
+            if (!guessBestFolderQueued)
+            {
+                guessBestFolderQueued = true;
+                Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
+                {
+                    guessBestFolderQueued = false;
+                    try
+                    {
+                        GuessBestFolder();
+                    }
+                    catch (Exception err)
+                    {
+                        MessageBox.Show("Unexpected error processing GuessBestFolderAsync.\n" + err.Message, "Fast File Error");
+                        Debug.WriteLine("Unexpected error processing GuessBestFolderAsync.\n" + err.Message + $"\n{err}");
+                    }
+                }), DispatcherPriority.Background);
+            }
+        }
+        
         internal void GuessBestFolder()
         {
             // Which folder contains the most messages from the conversation?
@@ -386,12 +445,12 @@ namespace QuickFile
             }
 
             // Return folder wrapper
-            bestFolderWrapper = null;
+            FolderWrapper best = null;
             if (bestFolder != null)
             {
                 try
                 {
-                    bestFolderWrapper = Globals.ThisAddIn.foldersCollection.Single(fw => fw.folder.EntryID == bestFolder.EntryID);
+                    best = Globals.ThisAddIn.foldersCollection.Single(fw => fw.folder.EntryID == bestFolder.EntryID);
                 }
                 catch (InvalidOperationException)
                 {
@@ -399,32 +458,7 @@ namespace QuickFile
                 }
             }
 
-            // Update Panel
-            control.RefreshSelection(bestFolderWrapper); // null will be ignored.
-
-            // Update Ribbon
-            RibbonButton button = null;
-            if (explorer != null && Globals.Ribbons[explorer].ExplorerRibbon != null)
-            {
-                button = Globals.Ribbons[explorer].ExplorerRibbon.guessButton;
-            }
-            else if (Globals.Ribbons[inspector].MailReadRibbon != null)
-            {
-                button = Globals.Ribbons[inspector].MailReadRibbon.guessButton;
-            }
-            if (button != null)
-            {
-                if (bestFolder == null)
-                {
-                    button.Label = "Move";
-                    button.Enabled = false;
-                }
-                else
-                {
-                    button.Label = bestFolder.Name;
-                    button.Enabled = true;
-                }
-            }
+            UpdateBestFolderWrapper(best);
         }
 
         public IEnumerable<Outlook.MailItem> GetSelectedMailItems()
@@ -510,7 +544,7 @@ namespace QuickFile
         {
             try
             {
-                GuessBestFolder();
+                GuessBestFolderAsync();
             }
             catch (Exception err)
             {
