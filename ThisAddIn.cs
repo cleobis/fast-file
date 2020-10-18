@@ -898,7 +898,14 @@ namespace QuickFile
         private TaskPaneContext GetActiveContext()
         {
             var window = Globals.ThisAddIn.Application.ActiveWindow();
-            return Globals.ThisAddIn.TaskPaneContexts[window];
+            if (Globals.ThisAddIn.TaskPaneContexts.ContainsKey(window))
+            {
+                return Globals.ThisAddIn.TaskPaneContexts[window];
+            }
+            else
+            {
+                return null;
+            }
         }
 
         internal struct KeystrokeFlags
