@@ -233,7 +233,7 @@ namespace QuickFile
                 ((Outlook.ExplorerEvents_10_Event)this.explorer).SelectionChange += new Microsoft.Office.Interop.Outlook.ExplorerEvents_10_SelectionChangeEventHandler(Explorer_SelectionChange);
             }
 
-            GuessBestFolder();
+            GuessBestFolderAsync();
         }
 
         internal object explorerOrInspector
@@ -241,6 +241,11 @@ namespace QuickFile
             get { return explorer == null ? (object)inspector : (object)explorer; }
         }
         
+        public void UpdateBestFolderWrapper()
+        {
+            // Called from inspector ribbon load event.
+            UpdateBestFolderWrapper(_bestFolderWrapper);
+        }
         private void UpdateBestFolderWrapper(FolderWrapper value)
         {
             _bestFolderWrapper = value;
@@ -249,13 +254,14 @@ namespace QuickFile
 
             // Update Ribbon
             RibbonButton button = null;
-            if (explorer != null && Globals.Ribbons[explorer].ExplorerRibbon != null)
+            if (explorer != null)
             {
-                button = Globals.Ribbons[explorer].ExplorerRibbon.guessButton;
+                button = Globals.Ribbons[explorer].ExplorerRibbon?.guessButton;
             }
-            else if (Globals.Ribbons[inspector].MailReadRibbon != null)
+            else
             {
-                button = Globals.Ribbons[inspector].MailReadRibbon.guessButton;
+                // The ribbon is not loaded until after the New Inspector event.
+                button = Globals.Ribbons[inspector].MailReadRibbon?.guessButton;
             }
             if (button != null)
             {

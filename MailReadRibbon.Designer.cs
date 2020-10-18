@@ -54,7 +54,7 @@
             // 
             this.group1.Items.Add(this.guessButton);
             this.group1.Items.Add(this.toggleButton1);
-            this.group1.Label = "group1";
+            this.group1.Label = "Quick File";
             this.group1.Name = "group1";
             // 
             // guessButton
@@ -70,7 +70,7 @@
             // toggleButton1
             // 
             this.toggleButton1.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
-            this.toggleButton1.Label = "ShowPanel";
+            this.toggleButton1.Label = "Show panel";
             this.toggleButton1.Name = "toggleButton1";
             this.toggleButton1.OfficeImageId = "ListToolPreviewRight";
             this.toggleButton1.ShowImage = true;

@@ -14,7 +14,15 @@ namespace QuickFile
     {
         private void Ribbon1_Load(object sender, RibbonUIEventArgs e)
         {
-
+            if (this.Context == null)
+            {
+                // Will call a second time after the NewInspector event.
+                return;
+            }
+            // The Ribbon is not loaded when the inspector is created. We need to make sure the best folder button gets updated.
+            Outlook.Inspector inspector = (Outlook.Inspector)this.Context;
+            TaskPaneContext taskPaneContext = Globals.ThisAddIn.TaskPaneContexts[inspector];
+            taskPaneContext.UpdateBestFolderWrapper();
         }
 
         private void toggleButton1_Click(object sender, RibbonControlEventArgs e)
