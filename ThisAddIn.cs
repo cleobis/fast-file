@@ -135,7 +135,8 @@ namespace QuickFile
                         {
                             folders.Add(Application.Session.DefaultStore.GetDefaultFolder(folderType) as Outlook.Folder);
                         } catch (COMException err) {
-                            if (err.ErrorCode != -2147221233) // folder not found
+                            if (err.ErrorCode != -2147221233 // folder not found
+                                && err.ErrorCode != 0x8004060E) // Exchange connection required.
                             {
                                 throw err;
                             }
