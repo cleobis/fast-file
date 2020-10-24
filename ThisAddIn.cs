@@ -111,7 +111,6 @@ namespace QuickFile
             var folders = new List<Outlook.Folder>();
             
             // https://docs.microsoft.com/en-us/dotnet/api/microsoft.office.interop.outlook.oldefaultfolders?view=outlook-pia
-            // https://stackoverflow.com/questions/972307/how-to-loop-through-all-enum-values-in-c
             foreach (var folderType in EnumUtil.GetValues<Outlook.OlDefaultFolders>())
             {
                 switch (folderType)
@@ -127,8 +126,6 @@ namespace QuickFile
                     case Outlook.OlDefaultFolders.olFolderOutbox:
                     case Outlook.OlDefaultFolders.olFolderRssFeeds:
                     case Outlook.OlDefaultFolders.olFolderSentMail:
-                    case Outlook.OlDefaultFolders.olFolderServerFailures:
-                    case Outlook.OlDefaultFolders.olFolderSyncIssues:
                     case Outlook.OlDefaultFolders.olFolderTasks:
                     case Outlook.OlDefaultFolders.olFolderToDo:
                         try
@@ -140,6 +137,27 @@ namespace QuickFile
                             {
                                 throw err;
                             }
+                        }
+                        break;
+
+                    // Folders to suppress but they hang if Outlook is in offline mode.
+                    case Outlook.OlDefaultFolders.olFolderServerFailures:
+                    case Outlook.OlDefaultFolders.olFolderSyncIssues:
+                        if (!Globals.ThisAddIn.Application.Session.Offline)
+                        {
+                            try
+                            {
+                                folders.Add(Application.Session.DefaultStore.GetDefaultFolder(folderType) as Outlook.Folder);
+                            }
+                            catch (COMException err)
+                            {
+                                if (err.ErrorCode != -2147221233 // folder not found
+                                    && err.ErrorCode != 0x8004060E) // Exchange connection required.
+                                {
+                                    throw err;
+                                }
+                            }
+                            break;
                         }
                         break;
 
@@ -987,6 +1005,7 @@ namespace QuickFile
 
     }
 
+    // https://stackoverflow.com/questions/972307/how-to-loop-through-all-enum-values-in-c
     public static class EnumUtil
     {
         public static IEnumerable<T> GetValues<T>()
