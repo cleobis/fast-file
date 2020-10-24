@@ -328,7 +328,10 @@ namespace QuickFile
         {
             foreach (Outlook.MailItem mailItem in GetSelectedMailItems())
             {
-                mailItem.Move(folder);
+                if ((mailItem.Parent as Outlook.Folder).EntryID != folder.EntryID)
+                {
+                    mailItem.Move(folder);
+                }
             }
         }
         
