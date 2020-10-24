@@ -15,6 +15,7 @@ using Microsoft.Office.Core;
 using Microsoft.Office.Tools.Ribbon;
 using System.Threading;
 using System.Windows.Threading;
+using System.Threading.Tasks;
 
 namespace QuickFile
 {
@@ -362,12 +363,12 @@ namespace QuickFile
             if (!guessBestFolderQueued)
             {
                 guessBestFolderQueued = true;
-                Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
+                Dispatcher.CurrentDispatcher.BeginInvoke(new Action(async () =>
                 {
                     guessBestFolderQueued = false;
                     try
                     {
-                        GuessBestFolder();
+                        await GuessBestFolder(true);
                     }
                     catch (Exception err)
                     {
@@ -378,7 +379,7 @@ namespace QuickFile
             }
         }
         
-        internal void GuessBestFolder()
+        internal async Task GuessBestFolder(bool yieldPeriodically = false)
         {
             // Which folder contains the most messages from the conversation?
             Dictionary<String, Tuple<Outlook.Folder, int>> folderVotes = new Dictionary<String, Tuple<Outlook.Folder, int>>();
@@ -437,6 +438,14 @@ namespace QuickFile
             }
             foreach (Outlook.MailItem mailItem in GetSelectedMailItems()) {
                 processItem(mailItem);
+                if (yieldPeriodically)
+                {
+                    await Dispatcher.Yield(DispatcherPriority.Background);
+                    if (guessBestFolderQueued)
+                    {
+                        return;
+                    }
+                }
             }
 
             // Remove distracting folders from consideration.
