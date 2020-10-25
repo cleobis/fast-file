@@ -28,8 +28,9 @@
     </UserControl.Resources>
     <DockPanel Margin="10">
         <StackPanel DockPanel.Dock="Top">
-            <mah:MetroHeader Content="Title"/>
-            <!--<Label Content="Hello"/>-->
+            <mah:MetroHeader Content="Filter" x:Name="Title"/>
+            <!-- Assigning a name triggers including the resources in the assembly at build. 
+            https://stackoverflow.com/questions/34024111/mahapps-metro-cannot-load-file-or-assembly-in-visual-studio-extension -->
             <ScrollViewer Height="0">
                 <TextBlock x:Name="textBlock"/>
             </ScrollViewer>
@@ -39,7 +40,7 @@
         </StackPanel>
         <Button x:Name="button" Content="Move" HorizontalAlignment="Center" DockPanel.Dock="Bottom"
                 IsEnabled="{Binding ElementName=listBox, Path=SelectedItems.Count}"
-                Click="Button_Click" />
+                Click="Button_Click" mah:ControlsHelper.ContentCharacterCasing="Normal" />
         <ListBox x:Name="listBox" MinHeight="100" SelectionMode="Single" Margin="0,0,0,10" VerticalAlignment="Top" 
                  MouseDoubleClick="listBox_MouseDoubleClick">
             <ListBox.ItemContainerStyle>

@@ -39,6 +39,7 @@ namespace QuickFile
         
         public TaskPaneControl()
         {
+            this.InheritanceBehavior = InheritanceBehavior.SkipToAppNext;
             InitializeComponent();
         }
 
