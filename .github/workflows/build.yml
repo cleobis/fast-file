@@ -33,12 +33,12 @@ jobs:
 
       - name: MSBuild Debug
         working-directory: .
-        run: msbuild.exe QuickFile.sln /p:Configuration=Debug /p:AssemblyOriginatorKeyFile "$certificatePath" /p:PackageCertificatePassword="${{ secrets.SIGNING_CERT_PWD }}"
+        run: msbuild.exe QuickFile.sln /p:Configuration=Debug /p:AssemblyOriginatorKeyFile "fast-file.pfx" /p:PackageCertificatePassword="${{ secrets.SIGNING_CERT_PWD }}"
         #/target:clean;build;publish /p:ApplicationVersion=<VERSION> /p:SignAssembly=true /p:GenerateManifests=true /p:SignManifests=true /p:AssemblyOriginatorKeyFile=<PFX_PATH> /p:ManifestCertificateThumbprint=<CERTIFICATE_ID> /property:Configuration=<CONFIGURATION>;PublishDir=<PUBLISH_DIR>;BootstrapperEnabled=true;PublishUrl=<PUBLISH_URL>;InstallUrl=<INSTALL_URL>;UpdateUrl=<UPDATE_URL>
 
       - name: MSBuild Release
         working-directory: .
-        run: msbuild.exe QuickFile.sln /p:Configuration=Release /p:AssemblyOriginatorKeyFile "$certificatePath" /p:PackageCertificatePassword="${{ secrets.SIGNING_CERT_PWD }}"
+        run: msbuild.exe QuickFile.sln /p:Configuration=Release /p:AssemblyOriginatorKeyFile "fast-file.pfx" /p:PackageCertificatePassword="${{ secrets.SIGNING_CERT_PWD }}"
       
       - name: Save artifacts
         uses: actions/upload-artifact@v2
