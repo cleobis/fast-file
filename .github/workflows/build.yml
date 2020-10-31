@@ -35,3 +35,9 @@ jobs:
       - name: MSBuild Release
         working-directory: .
         run: msbuild.exe QuickFile.sln /p:Configuration=Release /p:PackageCertificatePassword="${{ secrets.SIGNING_CERT_PWD }}"
+      
+      - name: Save artifacts
+        uses: actions/upload-artifact@v2
+        with:
+            name: publish
+            path: publish/
