@@ -38,7 +38,7 @@ jobs:
 
       - name: MSBuild Release
         working-directory: .
-        run: msbuild.exe QuickFile.sln /p:Configuration=Release /p:AssemblyOriginatorKeyFile
+        run: msbuild.exe QuickFile.sln /p:Configuration=Release
         #"fast-file.pfx" /p:PackageCertificatePassword="${{ secrets.SIGNING_CERT_PWD }}"
       
       - name: Save artifacts
