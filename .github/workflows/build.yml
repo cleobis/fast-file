@@ -20,11 +20,18 @@ jobs:
       
       - name: Update dependencies
         run: msbuild.exe -t:restore
-        
+      
+      - name: Decode signing certificate
+        run: |
+            $pfx_cert_byte = [System.Convert]::FromBase64String("${{ secrets.SIGNING_CERT }}")
+            $currentDirectory = Get-Location
+            $certificatePath = Join-Path -Path $currentDirectory -AdditionalChildPath "fast-file.pfx"
+            [IO.File]::WriteAllBytes("$certificatePath", $pfx_cert_byte)
+
       - name: MSBuild Debug
         working-directory: .
-        run: msbuild.exe QuickFile.sln /p:Configuration=Debug
+        run: msbuild.exe QuickFile.sln /p:Configuration=Debug /p:PackageCertificatePassword="${{ secrets.SIGNING_CERT_PWD }}"
 
       - name: MSBuild Release
         working-directory: .
-        run: msbuild.exe QuickFile.sln /p:Configuration=Release
+        run: msbuild.exe QuickFile.sln /p:Configuration=Release /p:PackageCertificatePassword="${{ secrets.SIGNING_CERT_PWD }}"

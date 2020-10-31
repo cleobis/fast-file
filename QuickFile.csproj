@@ -232,6 +232,7 @@
     <EmbeddedResource Include="TaskPaneControlWrapper.resx">
       <DependentUpon>TaskPaneControlWrapper.cs</DependentUpon>
     </EmbeddedResource>
+    <None Include="fast-file.pfx" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -271,10 +272,10 @@
     <SignManifests>true</SignManifests>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestKeyFile>QuickFile_TemporaryKey.pfx</ManifestKeyFile>
+    <ManifestKeyFile>fast-file.pfx</ManifestKeyFile>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestCertificateThumbprint>1BD04561555D985EDF61C98755340DCE5E1213BE</ManifestCertificateThumbprint>
+    <ManifestCertificateThumbprint>CE535E009B9A8B9832488A63553B5C69947D7D91</ManifestCertificateThumbprint>
   </PropertyGroup>
   <!-- Include the build rules for a C# project. -->
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
