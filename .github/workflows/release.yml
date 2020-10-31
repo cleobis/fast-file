@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 jobs:
-  build:
+  release:
     name: Release
     runs-on: windows-latest
 
@@ -48,7 +48,7 @@ jobs:
         run: |
             echo "${{ github.ref }}"
             "${{ github.ref }}" -match "v(\d+\.\d+\.\d+)"
-            echo "::set-output name=PUBLISH_VERSION::$Matches[1].${{ github.run_number }}"
+            echo ("::set-output name=PUBLISH_VERSION::{0}.${{ github.run_number }}" -f $Matches[1])
 
       - name: MSBuild publish
         working-directory: .
