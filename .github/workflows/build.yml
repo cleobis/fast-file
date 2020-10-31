@@ -27,7 +27,8 @@ jobs:
             $currentDirectory = Get-Location
             $certificatePath = Join-Path -Path $currentDirectory -ChildPath "fast-file.pfx"
             [IO.File]::WriteAllBytes("$certificatePath", $pfx_cert_byte)
-            Import-PfxCertificate -FilePath "$certificatePath" -CertStoreLocation "Cert:\CurrentUser\My" -Password "${{ secrets.SIGNING_CERT_PWD }}"
+            $pwd = ConvertTo-SecureString "${{ secrets.SIGNING_CERT_PWD }}" -asplaintext -force
+            Import-PfxCertificate -FilePath "$certificatePath" -CertStoreLocation "Cert:\CurrentUser\My" -Password "$pwd"
 
       - name: MSBuild Debug
         working-directory: .
