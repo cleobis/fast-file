@@ -28,15 +28,17 @@ jobs:
             $certificatePath = Join-Path -Path $currentDirectory -ChildPath "fast-file.pfx"
             [IO.File]::WriteAllBytes("$certificatePath", $pfx_cert_byte)
             $pwd = ConvertTo-SecureString "${{ secrets.SIGNING_CERT_PWD }}" -asplaintext -force
-            Import-PfxCertificate -FilePath $certificatePath -CertStoreLocation "Cert:\CurrentUser\Root" -Password $pwd
+
+            #Import-PfxCertificate -FilePath $certificatePath -CertStoreLocation "Cert:\CurrentUser\Root" -Password $pwd
 
       - name: MSBuild Debug
         working-directory: .
-        run: msbuild.exe QuickFile.sln /p:Configuration=Debug
+        run: msbuild.exe QuickFile.sln /p:Configuration=Debug /p:AssemblyOriginatorKeyFile "$certificatePath"
+        #/target:clean;build;publish /p:ApplicationVersion=<VERSION> /p:SignAssembly=true /p:GenerateManifests=true /p:SignManifests=true /p:AssemblyOriginatorKeyFile=<PFX_PATH> /p:ManifestCertificateThumbprint=<CERTIFICATE_ID> /property:Configuration=<CONFIGURATION>;PublishDir=<PUBLISH_DIR>;BootstrapperEnabled=true;PublishUrl=<PUBLISH_URL>;InstallUrl=<INSTALL_URL>;UpdateUrl=<UPDATE_URL>
 
       - name: MSBuild Release
         working-directory: .
-        run: msbuild.exe QuickFile.sln /p:Configuration=Release
+        run: msbuild.exe QuickFile.sln /p:Configuration=Release /p:AssemblyOriginatorKeyFile "$certificatePath"
       
       - name: Save artifacts
         uses: actions/upload-artifact@v2
