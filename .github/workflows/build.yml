@@ -25,7 +25,7 @@ jobs:
         run: |
             $pfx_cert_byte = [System.Convert]::FromBase64String("${{ secrets.SIGNING_CERT }}")
             $currentDirectory = Get-Location
-            $certificatePath = Join-Path -Path $currentDirectory -AdditionalChildPath "fast-file.pfx"
+            $certificatePath = Join-Path -Path $currentDirectory -ChildPath "fast-file.pfx"
             [IO.File]::WriteAllBytes("$certificatePath", $pfx_cert_byte)
 
       - name: MSBuild Debug
