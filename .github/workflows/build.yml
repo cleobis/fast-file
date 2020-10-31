@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v2.3.3
       
       - name: Update dependencies
-        run: msbuild.exe -t:restore
+        run: msbuild.exe /target:clean,restore
       
       - name: Decode signing certificate
         run: |
@@ -32,13 +32,13 @@ jobs:
 
       - name: MSBuild Debug
         working-directory: .
-        run: msbuild.exe QuickFile.sln /p:Configuration=Debug  /p:PackageCertificatePassword="${{ secrets.SIGNING_CERT_PWD }}"
+        run: msbuild.exe QuickFile.sln /p:Configuration=Debug /target:build
         #/p:AssemblyOriginatorKeyFile "fast-file.pfx" /p:PackageCertificatePassword="${{ secrets.SIGNING_CERT_PWD }}"
         #/target:clean;build;publish /p:ApplicationVersion=<VERSION> /p:SignAssembly=true /p:GenerateManifests=true /p:SignManifests=true /p:AssemblyOriginatorKeyFile=<PFX_PATH> /p:ManifestCertificateThumbprint=<CERTIFICATE_ID> /property:Configuration=<CONFIGURATION>;PublishDir=<PUBLISH_DIR>;BootstrapperEnabled=true;PublishUrl=<PUBLISH_URL>;InstallUrl=<INSTALL_URL>;UpdateUrl=<UPDATE_URL>
 
       - name: MSBuild Release
         working-directory: .
-        run: msbuild.exe QuickFile.sln /p:Configuration=Release
+        run: msbuild.exe QuickFile.sln /p:Configuration=Release /target:build,publish
         #"fast-file.pfx" /p:PackageCertificatePassword="${{ secrets.SIGNING_CERT_PWD }}"
       
       - name: Save artifacts
