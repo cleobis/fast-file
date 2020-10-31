@@ -47,7 +47,7 @@ jobs:
         run: |
             echo "${{ github.ref }}"
             "${{ github.ref }}" -match "v(\d+\.\d+\.\d+)"
-            echo "PUBLISH_VERSION=$Matches[1].${{ githum.run_number }}" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+            echo "PUBLISH_VERSION=$Matches[1].${{ github.run_number }}" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: MSBuild publish
         working-directory: .
