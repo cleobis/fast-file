@@ -275,7 +275,7 @@
     <ManifestKeyFile>fast-file.pfx</ManifestKeyFile>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestCertificateThumbprint>CE535E009B9A8B9832488A63553B5C69947D7D91</ManifestCertificateThumbprint>
+    <ManifestCertificateThumbprint>7813B3D6779E6B9770D17CD3CFAAEC6AD88C0635</ManifestCertificateThumbprint>
   </PropertyGroup>
   <!-- Include the build rules for a C# project. -->
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
