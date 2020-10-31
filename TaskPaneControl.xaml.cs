@@ -349,4 +349,27 @@ namespace QuickFile
             Debug.WriteLine("textBox_LostKeyboardFocus");
         }
     }
+    public class DesignerMockData
+    {
+        public DesignerMockData()
+        {
+        }
+        public String DisplayName
+        {
+            get { return "DisplayName"; }
+            set { }
+        }
+        public String DisplayPath
+        {
+            get { return "DisplayPath"; }
+            set { }
+        }
+
+        public Thickness DisplayNameMargin
+        {
+            get { return new Thickness(20, 0, 0, 0); }
+            set { }
+        }
+    }
+    
 }

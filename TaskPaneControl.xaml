@@ -24,33 +24,90 @@
                 <Setter Property="HorizontalContentAlignment" Value="Left"/>
                 <Setter Property="VerticalContentAlignment" Value="Center"/>
             </Style>
-     </ResourceDictionary>
+            <!-- Data for preview in designer-->
+            <x:Array x:Key="designerMockData" Type="{x:Type local:DesignerMockData}">
+                <local:DesignerMockData DisplayName="Folder" DisplayPath="\\"/>
+                <local:DesignerMockData DisplayName="two" DisplayPath="\\Folder\\" DisplayNameMargin="20,0,0,0">
+                </local:DesignerMockData>
+                <local:DesignerMockData DisplayName="three" DisplayPath="\\Folder\\" DisplayNameMargin="20,0,0,0"/>
+            </x:Array>
+        </ResourceDictionary>
     </UserControl.Resources>
     <DockPanel Margin="10">
         <StackPanel DockPanel.Dock="Top">
-            <mah:MetroHeader Content="Filter" x:Name="Title"/>
-            <!-- Assigning a name triggers including the resources in the assembly at build. 
+            <!-- Title
+            Assigning a name triggers including the resources in the assembly at build. Needed for preview in Design mode.
             https://stackoverflow.com/questions/34024111/mahapps-metro-cannot-load-file-or-assembly-in-visual-studio-extension -->
+            <mah:MetroHeader Content="Filter" x:Name="Title"/>
+            
+            <!-- Text field for printing debug info -->
             <ScrollViewer Height="0">
                 <TextBlock x:Name="textBlock"/>
             </ScrollViewer>
-            <TextBox x:Name="textBox" Focusable="True" Height="23" Text="" Margin="0,0,0,10"
+            
+            <!-- Text field for filtering -->
+            <TextBox x:Name="textBox" Focusable="True" Height="23" Margin="0,0,0,10"
                 TextChanged="TextBox_TextChanged" PreviewKeyDown="TextBox_PreviewKeyDown" KeyDown="TextBox_KeyDown" 
-                GotFocus="textBox_GotFocus" LostFocus="textBox_LostFocus" GotKeyboardFocus="textBox_GotKeyboardFocus" LostKeyboardFocus="textBox_LostKeyboardFocus"/>
+                GotFocus="textBox_GotFocus" LostFocus="textBox_LostFocus" GotKeyboardFocus="textBox_GotKeyboardFocus" LostKeyboardFocus="textBox_LostKeyboardFocus"
+                Text=""/>
+                <!-- ^ Change Text to preview style when field is ppulated -->
+
         </StackPanel>
+        
+        <!-- Submit button
+        Appears at bottom of panel. -->
         <Button x:Name="button" Content="Move" HorizontalAlignment="Center" DockPanel.Dock="Bottom"
                 IsEnabled="{Binding ElementName=listBox, Path=SelectedItems.Count}"
                 Click="Button_Click" mah:ControlsHelper.ContentCharacterCasing="Normal" />
+        
+        <!-- Listing of folders 
+        Last child of DockPanel will be in the middle and stretch to fill. -->
         <ListBox x:Name="listBox" MinHeight="100" SelectionMode="Single" Margin="0,0,0,10" VerticalAlignment="Top" 
-                 MouseDoubleClick="listBox_MouseDoubleClick">
+                 MouseDoubleClick="listBox_MouseDoubleClick"
+                 d:DataContext="{Binding Source={StaticResource designerMockData}}"
+                 ItemsSource="{Binding}">
+            <!-- ItemsSource binding used for design time. Overriden in code at run time.-->
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel>
+                        <StackPanel>
+                            <!-- Styling when filter box is populated -->
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Text.Length, ElementName=textBox, UpdateSourceTrigger=PropertyChanged}" Value="0">
+                                            <Setter  Property="Visibility" Value="Hidden" />
+                                            <Setter Property="Height" Value="0"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <TextBlock Text="{Binding DisplayPath}" Foreground="#FF868686"/>
+                            <TextBlock Text="{Binding DisplayName}" Margin="20,0,0,0"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <!-- Styling when filter box is empty -->
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter  Property="Height" Value="0" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Text.Length, ElementName=textBox, UpdateSourceTrigger=PropertyChanged}" Value="0">
+                                            <Setter  Property="Height" Value="Auto" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <TextBlock Margin="{Binding DisplayNameMargin}"  Text="{Binding DisplayName}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
             <ListBox.ItemContainerStyle>
                 <Style TargetType="{x:Type ListBoxItem}">
                     <Setter Property="HorizontalContentAlignment" Value="Left"/>
                     <Setter Property="VerticalContentAlignment" Value="Center"/>
                 </Style>
             </ListBox.ItemContainerStyle>
-            <!--<ListBoxItem>AAAA</ListBoxItem>
-            <ListBoxItem>ssssssssssssss</ListBoxItem>-->
         </ListBox>
     </DockPanel>
 </UserControl>
