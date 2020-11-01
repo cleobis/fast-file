@@ -82,6 +82,10 @@ jobs:
         with:
           version: ${{ steps.compute-version.outputs.PUBLISH_VERSION }}
           prerelease: true
+          template: |
+            ## What's Changed
+            
+            $CHANGES
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
