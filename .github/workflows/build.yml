@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    tags-ignore:
+    branches:
       - '**' # Ignore tags. Build only for pushed commits.
 
 jobs:
