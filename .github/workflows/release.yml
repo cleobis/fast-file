@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Release
+    runs-on: windows-latest
+
+    steps:
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.0.2
+        with:
+          vs-version: '[16.0,17.0)'
+          # Visual Studio 2019
+          
+      - name: Checkout
+        uses: actions/checkout@v2.3.3
+      
+      - name: Update dependencies
+        run: msbuild.exe /target:clean,restore
+      
+      - name: Decode signing certificate
+        run: |
+            $pfx_cert_byte = [System.Convert]::FromBase64String("${{ secrets.SIGNING_CERT }}")
+            $currentDirectory = Get-Location
+            $certificatePath = Join-Path -Path $currentDirectory -ChildPath "fast-file.pfx"
+            [IO.File]::WriteAllBytes("$certificatePath", $pfx_cert_byte)
+            $pwd = ConvertTo-SecureString "${{ secrets.SIGNING_CERT_PWD }}" -asplaintext -force
+            Import-PfxCertificate -FilePath $certificatePath -CertStoreLocation "Cert:\CurrentUser\My" -Password $pwd
+
+      - name: MSBuild Debug
+        working-directory: .
+        run: msbuild.exe QuickFile.sln /p:Configuration=Debug /target:build
+        #/p:AssemblyOriginatorKeyFile "fast-file.pfx" /p:PackageCertificatePassword="${{ secrets.SIGNING_CERT_PWD }}"
+        #/target:clean;build;publish /p:ApplicationVersion=<VERSION> /p:SignAssembly=true /p:GenerateManifests=true /p:SignManifests=true /p:AssemblyOriginatorKeyFile=<PFX_PATH> /p:ManifestCertificateThumbprint=<CERTIFICATE_ID> /property:Configuration=<CONFIGURATION>;PublishDir=<PUBLISH_DIR>;BootstrapperEnabled=true;PublishUrl=<PUBLISH_URL>;InstallUrl=<INSTALL_URL>;UpdateUrl=<UPDATE_URL>
+
+      - name: MSBuild Release
+        working-directory: .
+        run: msbuild.exe QuickFile.sln /p:Configuration=Release /target:build
+        #"fast-file.pfx" /p:PackageCertificatePassword="${{ secrets.SIGNING_CERT_PWD }}"
+      
+      - name: Compute release version
+        id: compute-version
+        run: |
+            echo "${{ github.ref }}"
+            "${{ github.ref }}" -match "v(\d+\.\d+\.\d+)"
+            echo ("::set-output name=PUBLISH_VERSION::{0}" -f $Matches[1])
+
+      - name: MSBuild publish
+        working-directory: .
+        run: msbuild.exe QuickFile.sln /p:Configuration=Release /target:publish /p:ApplicationVersion="${{ steps.compute-version.outputs.PUBLISH_VERSION }}.${{ github.run_number }}" /property:PublishDir="publish\" 
+      
+      - name: Make release zip
+        working-directory: .
+        run: Compress-Archive "fast-file-v${{ steps.compute-version.outputs.PUBLISH_VERSION }}.zip" -Path "publish/*"
+      
+      - name: Save artifacts
+        uses: actions/upload-artifact@v2
+        with:
+            name: publish
+            path: publish/
+
+      - name: Save artifacts 2
+        uses: actions/upload-artifact@v2
+        with:
+            name: zip
+            path: fast-file-v${{ steps.compute-version.outputs.PUBLISH_VERSION }}.zip
+            
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          prerelease: true
+          draft: true
+          files: fast-file-*.zip

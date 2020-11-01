@@ -232,6 +232,7 @@
     <EmbeddedResource Include="TaskPaneControlWrapper.resx">
       <DependentUpon>TaskPaneControlWrapper.cs</DependentUpon>
     </EmbeddedResource>
+    <None Include="fast-file.pfx" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -260,7 +261,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MahApps.Metro">
-      <Version>2.2.0</Version>
+      <Version>2.3.2</Version>
     </PackageReference>
   </ItemGroup>
   <PropertyGroup>
@@ -271,10 +272,10 @@
     <SignManifests>true</SignManifests>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestKeyFile>QuickFile_TemporaryKey.pfx</ManifestKeyFile>
+    <ManifestKeyFile>fast-file.pfx</ManifestKeyFile>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestCertificateThumbprint>1BD04561555D985EDF61C98755340DCE5E1213BE</ManifestCertificateThumbprint>
+    <ManifestCertificateThumbprint>7813B3D6779E6B9770D17CD3CFAAEC6AD88C0635</ManifestCertificateThumbprint>
   </PropertyGroup>
   <!-- Include the build rules for a C# project. -->
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
