@@ -48,17 +48,11 @@ jobs:
         run: |
             echo "${{ github.ref }}"
             "${{ github.ref }}" -match "v(\d+\.\d+\.\d+)"
-            echo ("::set-output name=PUBLISH_VERSION::{0}.${{ github.run_number }}" -f $Matches[1])
+            echo ("::set-output name=PUBLISH_VERSION::{0}" -f $Matches[1])
 
-      - name: Generate changelog
-        id: changelog
-        uses: metcalfc/changelog-generator@v0.4.2
-        with:
-            myToken: ${{ secrets.GITHUB_TOKEN }}
-            
       - name: MSBuild publish
         working-directory: .
-        run: msbuild.exe QuickFile.sln /p:Configuration=Release /target:publish /p:ApplicationVersion="${{ steps.compute-version.outputs.PUBLISH_VERSION }}" /property:PublishDir="publish\" 
+        run: msbuild.exe QuickFile.sln /p:Configuration=Release /target:publish /p:ApplicationVersion="${{ steps.compute-version.outputs.PUBLISH_VERSION }}.${{ github.run_number }}" /property:PublishDir="publish\" 
        
       - name: Save artifacts
         uses: actions/upload-artifact@v2
@@ -69,18 +63,27 @@ jobs:
       - name: Make release zip
         working-directory: .
         run: Compress-Archive "fast-file-v${{ steps.compute-version.outputs.PUBLISH_VERSION }}.zip" -Path "publish/*"
-
+      
       - name: Create release
         id: create_release
-        uses: actions/create-release@v1
+        uses: release-drafter/release-drafter@v5
+        with:
+          version: ${{ steps.compute-version.outputs.PUBLISH_VERSION }}
+          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: ${{ steps.changelog.outputs.changelog }}
-          draft: true
-          prerelease: true
+      
+      #- name: Create release
+      #  id: create_release
+      #  uses: actions/create-release@v1
+      #  env:
+      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #  with:
+      #    tag_name: ${{ github.ref }}
+      #    release_name: Release ${{ github.ref }}
+      #    body: ${{ steps.changelog.outputs.changelog }}
+      #    draft: true
+      #    prerelease: true
 
       - name: Upload release asset
         id: upload-release-asset 
