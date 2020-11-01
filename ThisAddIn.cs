@@ -664,6 +664,7 @@ namespace QuickFile
         private Outlook.Folders folders; // Have to retain this reference or the events get garbage collected
         public FolderWrapper parent;
         public List<FolderWrapper> children;
+        private String path;
         private int depth;
         public bool stale = false;
 
@@ -672,13 +673,19 @@ namespace QuickFile
             this.folder = folder;
             this.parent = parent;
             this.folders = folder.Folders;
-
+            
             depth = 0;
+            path = "\\";
             var p = folder.Parent;
             while (p is Outlook.Folder)
             {
                 depth += 1;
+                String tmpPath = (p as Outlook.Folder).Name;
                 p = (p as Outlook.Folder).Parent;
+                if (p is Outlook.Folder)
+                {
+                    path = "\\" + tmpPath + path;
+                }
             }
 
             children = new List<FolderWrapper>(folders.Count);
@@ -705,7 +712,22 @@ namespace QuickFile
 
         public String DisplayName
         {
-            get { return string.Concat(Enumerable.Repeat("  ", depth)) + folder.Name; }
+            get { return folder.Name; }
+        }
+
+        public String DisplayPath
+        {
+            get { return path; }
+        }
+
+        public int Depth
+        {
+            get { return depth; }
+        }
+
+        public Thickness DisplayNameMargin
+        {
+            get { return new Thickness(10 * depth, 0, 0, 0); }
         }
 
         public void Folders_FolderAdd(Outlook.MAPIFolder new_folder)
