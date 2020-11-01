@@ -1,11 +1,14 @@
 ﻿using ControlzEx.Standard;
 using MahApps.Metro.Controls;
+using Microsoft.Office.Core;
 using Microsoft.Office.Interop.Outlook;
 using Microsoft.Xaml.Behaviors.Core;
 using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -36,24 +39,25 @@ namespace QuickFile
         private ThisAddIn addIn = null;
         private ListCollectionView listCollectionView = null;
         internal TaskPaneContext taskPaneContext = null;
-        
+
         public TaskPaneControl()
         {
             this.InheritanceBehavior = InheritanceBehavior.SkipToAppNext;
             InitializeComponent();
         }
 
-        
+
         public void SetUp()
         {
             addIn = Globals.ThisAddIn;
 
             listCollectionView = new ListCollectionView(addIn.foldersCollection);
-            listCollectionView.Filter = FilterHelper;
-            listCollectionView.CustomSort = new SortHelper("");
+            var sortHelper = new SortHelper(textBox);
+            listCollectionView.Filter = o => sortHelper.Filter(o);
+            listCollectionView.CustomSort = sortHelper;
             listBox.ItemsSource = listCollectionView;
         }
-        
+
         internal void RefreshSelection(FolderWrapper folder = null)
         {
             //listCollectionView.Refresh();
@@ -68,7 +72,7 @@ namespace QuickFile
                 listBox.SelectedIndex = 0;
             }
         }
-        
+
         private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             try
@@ -89,127 +93,224 @@ namespace QuickFile
                 MessageBox.Show("Unexpected error processing TextBox_TextChanged.\n" + err.Message, "Fast File Error");
                 Debug.WriteLine("Unexpected error processing TextBox_TextChanged.\n" + err.Message + $"\n{err}");
             }
-        }
-
-        private bool FilterHelper(object obj)
-        {
-            var query = textBox.Text;
-            if (string.IsNullOrEmpty(query))
-            {
-                return true;
-            }
-            else
-            {
-                return (obj.ToString().IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0);
-            }
-        }
+        } 
 
         internal class SortHelper : System.Collections.IComparer
         {
-            public SortHelper(String _) { }
+            private static CharacterSet WordSeperators = null;
+            private static CharacterSet Uppercase = null;
+            private readonly TextBox textBox;
+            private string textBoxCache;
+            private Dictionary<String, float> scoreCache;
+
+            public SortHelper(TextBox _textBox)
+            {
+                textBox = _textBox;
+                textBoxCache = textBox.Text;
+
+                if (WordSeperators == null)
+                {
+                    // Initialize static member once
+                    WordSeperators = new CharacterSet();
+                    WordSeperators.Add(UnicodeCategory.SpaceSeparator);
+                    WordSeperators.Add('.');
+                    WordSeperators.Add('\\');
+                }
+                if (Uppercase == null)
+                {
+                    Uppercase = new CharacterSet();
+                    Uppercase.Add(UnicodeCategory.UppercaseLetter);
+                }
+
+                scoreCache = new Dictionary<String, float>();
+            }
+
+            private struct StringRange
+            {
+                public int Start, Length;
+                public StringRange(int _start, int _length)
+                {
+                    Start = _start;
+                    Length = _length;
+                }
+
+                public String Slice(String str)
+                {
+                    return str.Substring(Start, Length);
+                }
+            };
+            private class CharacterSet
+            {
+                private List<Char> _characters;
+                private List<UnicodeCategory> _categories;
+                public CharacterSet()
+                {
+                    _characters = new List<Char>();
+                    _categories = new List<UnicodeCategory>();
+                }
+                public void Add(char _char)
+                {
+                    _characters.Add(_char);
+                }
+                public void Add(UnicodeCategory category)
+                {
+                    _categories.Add(category);
+                }
+                public bool Contains(char _char)
+                {
+                    if (_characters.Contains(_char))
+                    {
+                        return true;
+                    }
+
+                    return _categories.Contains(Char.GetUnicodeCategory(_char));
+                }
+            }
+
+            public bool Filter(object obj)
+            {
+                CheckTextBoxUnchanged();
+
+                if (string.IsNullOrEmpty(textBoxCache))
+                {
+                    return true;
+                }
+                else
+                {
+                    var fw = obj as FolderWrapper;
+                    float score = GetScore(fw.folder.Name);
+                    return score > 0;
+                }
+            }
+
             public int Compare(object a, object b)
             {
+                CheckTextBoxUnchanged();
+
                 var fwa = a as FolderWrapper;
                 var fwb = b as FolderWrapper;
-                return String.Compare(fwa.folder.FolderPath, fwb.folder.FolderPath, true);
+
+                if (string.IsNullOrEmpty(textBoxCache))
+                {
+                    return String.Compare(fwa.folder.FolderPath, fwb.folder.FolderPath, true);
+                }
+                else
+                {
+                    // return -ve if a < b logically. 
+                    float score_a = GetScore(fwa.folder.Name);
+                    float score_b = GetScore(fwb.folder.Name);
+                    float diff = score_a - score_b;
+                    if (score_a > score_b)
+                        return -1;
+                    else if (score_a == score_b)
+                        return 0;
+                    else
+                        return +1;
+                }
+            }
+
+            private float GetScore(string input)
+            {
+                if (string.IsNullOrEmpty(input))
+                    return 0;
+
+                float finalScore;
+                bool cacheHit = scoreCache.TryGetValue(input, out finalScore);
+                if (!cacheHit)
+                {
+                    finalScore = ScoreForAbbreviation(input, textBoxCache);
+                    scoreCache.Add(input, finalScore);
+                }
+                return finalScore;
 
                 // https://github.com/quicksilver/Quicksilver/blob/8be7395b795179cf51cf30ebf82779e0f9ba2138/Quicksilver/Code-QuickStepFoundation/QSSense.m
-                /* 
-                    #define MIN_ABBR_OPTIMIZE 0
-                    #define IGNORED_SCORE 0.9
-                    #define SKIPPED_SCORE 0.15
+                float ScoreForAbbreviation(String str, String abbr)
+                {
+                    return ScoreForAbbreviationWithRanges(str, abbr, new StringRange(0, str.Length), new StringRange(0, abbr.Length));
+                }
 
+                float ScoreForAbbreviationWithRanges(String str, String abbr, StringRange strRange, StringRange abbrRange)
+                {
+                    const float MIN_ABBR_OPTIMIZE = 0f;
+                    const float IGNORED_SCORE = 0.9f;
+                    const float SKIPPED_SCORE = 0.15f;
 
+                    if (abbrRange.Length == 0)
+                        return IGNORED_SCORE; //deduct some points for all remaining letters
 
-                    CGFloat QSScoreForAbbreviationWithRanges(CFStringRef str, CFStringRef abbr, id mask, CFRange strRange, CFRange abbrRange);
+                    if (abbrRange.Length > strRange.Length)
+                        return 0.0f;
 
-                    CGFloat QSScoreForAbbreviation(CFStringRef str, CFStringRef abbr, id mask) {
-                    return QSScoreForAbbreviationWithRanges(str, abbr, mask, CFRangeMake(0, CFStringGetLength(str) ), CFRangeMake(0, CFStringGetLength(abbr)));
-                    }
+                    float score = 0.0f, remainingScore = 0.0f;
+                    int i, j;
+                    StringRange matchedRange, remainingStrRange = new StringRange(0, 0), adjustedStrRange = strRange;
 
-                    CGFloat QSScoreForAbbreviationWithRanges(CFStringRef str, CFStringRef abbr, id mask, CFRange strRange, CFRange abbrRange) {
-
-                    if (!abbrRange.length)
-                    return IGNORED_SCORE; //deduct some points for all remaining letters
-
-                    if (abbrRange.length > strRange.length)
-                    return 0.0;
-
-                    // Create an inline buffer version of str.  Will be used in loop below
-                    // for faster lookups.
-                    CFStringInlineBuffer inlineBuffer;
-                    CFStringInitInlineBuffer(str, &inlineBuffer, strRange);
-                    CFLocaleRef userLoc = CFLocaleCopyCurrent();
-
-                    CGFloat score = 0.0, remainingScore = 0.0;
-                    NSInteger i, j;
-                    CFRange matchedRange, remainingStrRange, adjustedStrRange = strRange;
-
-                    for (i = abbrRange.length; i > 0; i--) { //Search for steadily smaller portions of the abbreviation
-                    CFStringRef curAbbr = CFStringCreateWithSubstring (NULL, abbr, CFRangeMake(abbrRange.location, i) );
-                    //terminality
-                    //axeen
-                    //        CFLocaleRef userLoc = CFLocaleCopyCurrent();
-                    BOOL found = CFStringFindWithOptionsAndLocale(str, curAbbr,
-                                                              CFRangeMake(adjustedStrRange.location, adjustedStrRange.length - abbrRange.length + i),
-                                                              kCFCompareCaseInsensitive | kCFCompareDiacriticInsensitive | kCFCompareLocalized,
-                                                              userLoc, &matchedRange);
-                    CFRelease(curAbbr);
-                    //        CFRelease(userLoc);
-
-                    if (!found) {
-                    continue;
-                    }
-
-                    if (mask) {
-                    [mask addIndexesInRange:NSMakeRange(matchedRange.location, matchedRange.length)];
-                    }
-
-
-                    remainingStrRange.location = matchedRange.location + matchedRange.length;
-                    remainingStrRange.length = strRange.location + strRange.length - remainingStrRange.location;
-
-                    // Search what is left of the string with the rest of the abbreviation
-                    remainingScore = QSScoreForAbbreviationWithRanges(str, abbr, mask, remainingStrRange, CFRangeMake(abbrRange.location + i, abbrRange.length - i) );
-
-                    if (remainingScore) {
-                    score = remainingStrRange.location-strRange.location;
-                    // ignore skipped characters if is first letter of a word
-                    if (matchedRange.location>strRange.location) {//if some letters were skipped
-                        static CFCharacterSetRef wordSeparator = NULL;
-                        if (!wordSeparator)
+                    for (i = abbrRange.Length; i > 0; i--)
+                    {
+                        //Search for steadily smaller portions of the abbreviation
+                        String curAbbr = abbr.Substring(abbrRange.Start, i);
+                        int idx = str.IndexOf(curAbbr, adjustedStrRange.Start, adjustedStrRange.Length - abbrRange.Length + i, StringComparison.CurrentCultureIgnoreCase);
+                        matchedRange = new StringRange(idx, curAbbr.Length);
+                        if (idx == -1)
                         {
-                          wordSeparator = CFCharacterSetCreateMutableCopy(NULL, CFCharacterSetGetPredefined(kCFCharacterSetWhitespace));
-                          CFCharacterSetAddCharactersInString((CFMutableCharacterSetRef)wordSeparator, (CFStringRef)@".");
+                            // not found
+                            continue;
                         }
-                        static CFCharacterSetRef uppercase = NULL;
-                        if (!uppercase) uppercase = CFCharacterSetGetPredefined(kCFCharacterSetUppercaseLetter);
-                        if (CFCharacterSetIsCharacterMember(wordSeparator, CFStringGetCharacterFromInlineBuffer(&inlineBuffer, matchedRange.location-1) )) {
-                            for (j = matchedRange.location-2; j >= (NSInteger) strRange.location; j--) {
-                                if (CFCharacterSetIsCharacterMember(wordSeparator, CFStringGetCharacterFromInlineBuffer(&inlineBuffer, j) )) score--;
-                                else score -= SKIPPED_SCORE;
-                            }
-                        } else if (CFCharacterSetIsCharacterMember(uppercase, CFStringGetCharacterFromInlineBuffer(&inlineBuffer, matchedRange.location) )) {
-                            for (j = matchedRange.location-1; j >= (NSInteger) strRange.location; j--) {
-                                if (CFCharacterSetIsCharacterMember(uppercase, CFStringGetCharacterFromInlineBuffer(&inlineBuffer, j) ))
-                                    score--;
+
+                        remainingStrRange.Start = matchedRange.Start + matchedRange.Length;
+                        remainingStrRange.Length = strRange.Start + strRange.Length - remainingStrRange.Start;
+
+                        // Search what is left of the string with the rest of the abbreviation
+                        remainingScore = ScoreForAbbreviationWithRanges(str, abbr, remainingStrRange, new StringRange(abbrRange.Start + i, abbrRange.Length - i));
+
+                        if (remainingScore != 0)
+                        {
+                            score = remainingStrRange.Start - strRange.Start;
+                            // ignore skipped characters if is first letter of a word
+                            if (matchedRange.Start > strRange.Start)
+                            {//if some letters were skipped
+
+                                if (WordSeperators.Contains(str.ElementAt(matchedRange.Start - 1)))
+                                {
+                                    for (j = matchedRange.Start - 2; j >= strRange.Start; j--)
+                                    {
+                                        if (WordSeperators.Contains(str.ElementAt(j)))
+                                            score--;
+                                        else
+                                            score -= SKIPPED_SCORE;
+                                    }
+                                }
+                                else if (Uppercase.Contains(str.ElementAt(matchedRange.Start)))
+                                {
+                                    for (j = matchedRange.Start - 1; j >= strRange.Start; j--)
+                                    {
+                                        if (Uppercase.Contains(str.ElementAt(j)))
+                                            score--;
+                                        else
+                                            score -= SKIPPED_SCORE;
+                                    }
+                                }
                                 else
-                                    score -= SKIPPED_SCORE;
+                                {
+                                    score -= (matchedRange.Start - strRange.Start) / 2;
+                                }
                             }
-                        } else {
-                            score -= (matchedRange.location-strRange.location)/2;
+                            score += remainingScore * remainingStrRange.Length;
+                            score /= strRange.Length;
+                            return score;
                         }
                     }
-                    score += remainingScore*remainingStrRange.length;
-                    score /= strRange.length;
-                    CFRelease(userLoc);
-                    return score;
-                    }
-                    }
-                    CFRelease(userLoc);
-                    return 0;
-                    }
-                */
+                    return 0.0f;
+                }
+
+            }
+
+            private void CheckTextBoxUnchanged()
+            {
+                if (textBox.Text == textBoxCache)
+                    return;
+                scoreCache.Clear();
+                textBoxCache = textBox.Text;
             }
         }
 
