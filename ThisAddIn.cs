@@ -196,12 +196,6 @@ namespace QuickFile
             return folders;
         }
 
-        public void RehookKeyboard()
-        {
-            interceptKeys.Detach();
-            interceptKeys.Attach();
-        }
-
         #region VSTO generated code
 
         /// <summary>

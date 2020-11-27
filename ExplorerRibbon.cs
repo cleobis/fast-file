@@ -46,18 +46,5 @@ namespace QuickFile
                 Debug.WriteLine("Unexpected error processing button.\n" + err.Message + $"\n{err}");
             }
         }
-
-        private void buttonRehook_Click(object sender, RibbonControlEventArgs e)
-        {
-            try
-            {
-                Globals.ThisAddIn.RehookKeyboard();
-            }
-            catch (Exception err)
-            {
-                MessageBox.Show("Unexpected error processing button.\n" + err.Message, "Fast File Error");
-                Debug.WriteLine("Unexpected error processing button.\n" + err.Message + $"\n{err}");
-            }
-        }
     }
 }
