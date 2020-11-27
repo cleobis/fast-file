@@ -299,6 +299,7 @@ namespace QuickFile
                 taskPane.Visible = value;
                 if (value)
                 {
+                    control.Focus();
                     control.textBox.Focus();
 
                     // Fix escape key capturing
@@ -925,7 +926,7 @@ namespace QuickFile
                     if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
                     {
                         // Ctrl+Shfit+V => Show GUI
-                        Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() => {
+                        Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Send, new Action(() => {
                             try
                             {
                                 var context = GetActiveContext();
