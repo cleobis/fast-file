@@ -231,7 +231,6 @@ namespace QuickFile
 
                 float ScoreForAbbreviationWithRanges(String str, String abbr, StringRange strRange, StringRange abbrRange)
                 {
-                    const float MIN_ABBR_OPTIMIZE = 0f;
                     const float IGNORED_SCORE = 0.9f;
                     const float SKIPPED_SCORE = 0.15f;
 

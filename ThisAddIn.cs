@@ -134,7 +134,7 @@ namespace QuickFile
                             folders.Add(Application.Session.DefaultStore.GetDefaultFolder(folderType) as Outlook.Folder);
                         } catch (COMException err) {
                             if (err.ErrorCode != -2147221233 // folder not found
-                                && err.ErrorCode != 0x8004060E) // Exchange connection required.
+                                && err.ErrorCode != unchecked((int)0x8004060E)) // Exchange connection required.
                             {
                                 throw err;
                             }
@@ -153,7 +153,7 @@ namespace QuickFile
                             catch (COMException err)
                             {
                                 if (err.ErrorCode != -2147221233 // folder not found
-                                    && err.ErrorCode != 0x8004060E) // Exchange connection required.
+                                    && err.ErrorCode != unchecked((int)0x8004060E)) // Exchange connection required.
                                 {
                                     throw err;
                                 }
@@ -385,7 +385,7 @@ namespace QuickFile
                 {
                     conv = mailItem.GetConversation();
                 }
-                catch (COMException err)
+                catch (COMException)
                 {
                     //It's supposed to return null if there is no converstaion but actually throws and exception
                 }
@@ -420,7 +420,7 @@ namespace QuickFile
                         {
                             children = conversation.GetChildren(myItem);
                         }
-                        catch (COMException err)
+                        catch (COMException)
                         {
                             var subject = myItem is Outlook.MailItem ? (myItem as Outlook.MailItem).Subject : "<Unknown item>";
                             Debug.WriteLine("Unable to get conversation children for " + subject);
@@ -509,7 +509,7 @@ namespace QuickFile
                 {
                     headers = explorer.Selection.GetSelection(Outlook.OlSelectionContents.olConversationHeaders);
                 }
-                catch (COMException err)
+                catch (COMException)
                 {
                     // ^ failed once when moving only part of the message.
                     Debug.WriteLine("Error with GetSelection().");
