@@ -367,7 +367,7 @@ namespace QuickFile
                     }
                     catch (Exception err)
                     {
-                        MessageBox.Show("Unexpected error processing GuessBestFolderAsync.\n" + err.Message, "Fast File Error");
+                        MessageBox.Show("Unexpected error processing GuessBestFolderAsync.\n" + err.Message + $"\n{err}", "Fast File Error");
                         Debug.WriteLine("Unexpected error processing GuessBestFolderAsync.\n" + err.Message + $"\n{err}");
                     }
                 }), DispatcherPriority.Background);
