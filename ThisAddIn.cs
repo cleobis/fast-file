@@ -384,16 +384,17 @@ namespace QuickFile
                 try
                 {
                     conv = mailItem.GetConversation();
+                    Outlook.SimpleItems simpleItems = conv.GetRootItems();
                 }
                 catch (COMException err)
                 {
-                    //It's supposed to return null if there is no converstaion but actually throws and exception
+                    // GetConversation is supposed to return null if there is no converstaion but actually throws and exception.
+                    // GetRootItems throws an error for come conversations that have meeting invitations.
                 }
 
                 if (conv != null)
                 {
                     // Obtain root items and enumerate the conversation. 
-                    Outlook.SimpleItems simpleItems = conv.GetRootItems();
                     EnumerateConversation(simpleItems, conv);
                 }
             }
