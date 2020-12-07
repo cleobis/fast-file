@@ -385,7 +385,10 @@ namespace QuickFile
                 try
                 {
                     conv = mailItem.GetConversation();
-                    simpleItems = conv.GetRootItems();
+                    if (conv != null)
+                    {
+                        simpleItems = conv.GetRootItems();
+                    }
                 }
                 catch (COMException err)
                 {
