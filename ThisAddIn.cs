@@ -24,6 +24,9 @@ namespace QuickFile
         internal ObservableCollection<FolderWrapper> foldersCollection;
         internal FolderWrapper folderTree;
         
+        private List<Outlook.Folder> defaultFoldersCache = null;
+        private List<Outlook.Folder> defaultFoldersWithInboxCache = null;
+
         public Dictionary<object, TaskPaneContext> TaskPaneContexts = new Dictionary<object, TaskPaneContext>();
         private Outlook.Inspectors inspectors; // So event isn't garbage collected.
         private Outlook.Explorers explorers; // So event isn't garbage collected.
@@ -32,7 +35,7 @@ namespace QuickFile
 
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
-            UpdateFolderList();
+            UpdateFolderListAsync();
 
             interceptKeys = new InterceptKeys();
             interceptKeys.Attach();
@@ -73,7 +76,7 @@ namespace QuickFile
             TaskPaneContexts.Add(explorer, new TaskPaneContext(explorer));
         }
 
-        public void UpdateFolderList()
+        public async void UpdateFolderListAsync()
         {
 
             if (folderTree is null)
@@ -81,7 +84,7 @@ namespace QuickFile
                 Outlook.Folder root = Globals.ThisAddIn.Application.Session.DefaultStore.GetRootFolder() as Outlook.Folder;
                 // or loop over Application.Session.Stores
 
-                folderTree = new FolderWrapper(root, null, GetDefaultFolders(false));
+                folderTree = new FolderWrapper(root, null, await GetDefaultFoldersCachedAsync(false));
                 foldersCollection = new ObservableCollection<FolderWrapper>(); //Change to incremental update later
 
             }
@@ -107,10 +110,33 @@ namespace QuickFile
             }
         }
 
-        public List<Outlook.Folder> GetDefaultFolders(bool includeInbox)
+        public async Task<List<Outlook.Folder>> GetDefaultFoldersCachedAsync(bool includeInbox)
         {
+            if (defaultFoldersCache == null) {
+                // Not initialized yet.
+                await UpdatedDefaultFoldersAsync();
+            }
+
+            if (includeInbox)
+            {
+                return defaultFoldersWithInboxCache;
+            }
+            else
+            {
+                return defaultFoldersCache;
+            }        
+        }
+
+        public async Task UpdatedDefaultFoldersAsync()
+        {
+            // TODO: make sure there can't be multiple copies of this executing simultaneously.
             var folders = new List<Outlook.Folder>();
-            
+
+            var defaultFolders = new List<Outlook.Folder>();
+
+            _ = Dispatcher.CurrentDispatcher; // Ensure Dispatcher exists.
+            await Dispatcher.Yield(DispatcherPriority.Background);
+
             // https://docs.microsoft.com/en-us/dotnet/api/microsoft.office.interop.outlook.oldefaultfolders?view=outlook-pia
             foreach (var folderType in EnumUtil.GetValues<Outlook.OlDefaultFolders>())
             {
@@ -168,23 +194,10 @@ namespace QuickFile
                     case Outlook.OlDefaultFolders.olPublicFoldersAllPublicFolders:
                         break;
 
-                    // Depends on input argument
+                    // Inbox handled later
                     case Outlook.OlDefaultFolders.olFolderInbox:
-                        if (includeInbox)
-                        {
-                            try
-                            {
-                                folders.Add(Application.Session.DefaultStore.GetDefaultFolder(folderType) as Outlook.Folder);
-                            }
-                            catch (COMException err)
-                            {
-                                if (err.ErrorCode != 2147221233) // folder not found
-                                {
-                                    throw err;
-                                }
-                            }
-                        }
                         break;
+                        
 
                     // Folders to do nothing
                     case Outlook.OlDefaultFolders.olFolderManagedEmail:
@@ -192,8 +205,22 @@ namespace QuickFile
 
                         break;
                 }
+                await Dispatcher.Yield(DispatcherPriority.Background);
             }
-            return folders;
+
+            defaultFoldersCache = defaultFolders;
+            defaultFoldersWithInboxCache = new List<Outlook.Folder>(defaultFolders);
+            try
+            {
+                defaultFoldersWithInboxCache.Add(Application.Session.DefaultStore.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderInbox) as Outlook.Folder);
+            }
+            catch (COMException err)
+            {
+                if (err.ErrorCode != 2147221233) // folder not found
+                {
+                    throw err;
+                }
+            }
         }
 
         #region VSTO generated code
@@ -299,6 +326,8 @@ namespace QuickFile
                 taskPane.Visible = value;
                 if (value)
                 {
+                    control.LateSetup();
+
                     control.Focus();
                     control.textBox.Focus();
 
@@ -376,6 +405,12 @@ namespace QuickFile
         
         internal async Task GuessBestFolder(bool yieldPeriodically = false)
         {
+            if (Globals.ThisAddIn.foldersCollection == null)
+            {
+                // Plugin is still initializing.
+                return;
+            }
+
             // Which folder contains the most messages from the conversation?
             Dictionary<String, Tuple<Outlook.Folder, int>> folderVotes = new Dictionary<String, Tuple<Outlook.Folder, int>>();
             void processItem(Outlook.MailItem mailItem)
@@ -444,7 +479,7 @@ namespace QuickFile
             }
 
             // Remove distracting folders from consideration.
-            var folderBlacklist = Globals.ThisAddIn.GetDefaultFolders(false);
+            var folderBlacklist = new List<Outlook.Folder>(await Globals.ThisAddIn.GetDefaultFoldersCachedAsync(false));
             if (explorer != null)
             {
                 folderBlacklist.Add(explorer.CurrentFolder as Outlook.Folder);
@@ -725,17 +760,17 @@ namespace QuickFile
             get { return new Thickness(10 * depth, 0, 0, 0); }
         }
 
-        public void Folders_FolderAdd(Outlook.MAPIFolder new_folder)
+        public async void Folders_FolderAdd(Outlook.MAPIFolder new_folder)
         {
             try
             {
                 Debug.WriteLine("FolderAdd Starting");
 
-                FolderWrapper fw = new FolderWrapper(new_folder as Outlook.Folder, this, Globals.ThisAddIn.GetDefaultFolders(false));
+                FolderWrapper fw = new FolderWrapper(new_folder as Outlook.Folder, this, await Globals.ThisAddIn.GetDefaultFoldersCachedAsync(false));
                 //children.Insert(0,fw);
                 //collection.Insert(collection.IndexOf(this) + 1, fw);
 
-                Globals.ThisAddIn.UpdateFolderList();
+                Globals.ThisAddIn.UpdateFolderListAsync();
 
                 Debug.WriteLine("FolderAdd Done.");
             }
@@ -784,7 +819,7 @@ namespace QuickFile
                     }
                 }
 
-                Globals.ThisAddIn.UpdateFolderList();
+                Globals.ThisAddIn.UpdateFolderListAsync();
 
                 Debug.WriteLine("FolderRemove Done");
             }

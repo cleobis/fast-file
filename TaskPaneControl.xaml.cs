@@ -50,27 +50,35 @@ namespace QuickFile
         public void SetUp()
         {
             addIn = Globals.ThisAddIn;
+        }
 
-            listCollectionView = new ListCollectionView(addIn.foldersCollection);
-            var sortHelper = new SortHelper(textBox);
-            listCollectionView.Filter = o => sortHelper.Filter(o);
-            listCollectionView.CustomSort = sortHelper;
-            listBox.ItemsSource = listCollectionView;
+        public void LateSetup()
+        {
+            // Now that plugin initializatin code is moved out of Startup into an asynchronous code, need to make sure it is done before trying to reference. Should really have some feedback on the UI.
+            if (listCollectionView == null) {
+                listCollectionView = new ListCollectionView(addIn.foldersCollection);
+                var sortHelper = new SortHelper(textBox);
+                listCollectionView.Filter = o => sortHelper.Filter(o);
+                listCollectionView.CustomSort = sortHelper;
+                listBox.ItemsSource = listCollectionView;
+            }
         }
 
         internal void RefreshSelection(FolderWrapper folder = null)
         {
             //listCollectionView.Refresh();
-
-            if (folder != null)
+            this.Dispatcher.Invoke(() => // Must be on main thread
             {
-                listBox.SelectedItem = folder;
-            }
+                if (folder != null)
+                {
+                    listBox.SelectedItem = folder;
+                }
 
-            if (listBox.SelectedIndex < 0)
-            {
-                listBox.SelectedIndex = 0;
-            }
+                if (listBox.SelectedIndex < 0)
+                {
+                    listBox.SelectedIndex = 0;
+                }
+            });
         }
 
         private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
