@@ -386,8 +386,12 @@ namespace QuickFile
 
         public void MoveSelectedItem(Outlook.Folder folder)
         {
-            foreach (Outlook.MailItem mailItem in GetSelectedMailItems())
+            // Simply iterating through GetSelectedMainItems() often stops. Try storing referenes to the messages before starting to move them.
+            // Process items in reverse order so that the focus stays near the most recent message in a chain.
+            Stack<Outlook.MailItem> stack = new Stack<Outlook.MailItem>(GetSelectedMailItems());
+            while (stack.Count() > 0)
             {
+                Outlook.MailItem mailItem = stack.Pop();
                 if ((mailItem.Parent as Outlook.Folder).EntryID != folder.EntryID)
                 {
                     mailItem.Move(folder);
