@@ -36,6 +36,8 @@ namespace QuickFile
     public partial class TaskPaneControl : UserControl
     {
 
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
         private ThisAddIn addIn = null;
         private ListCollectionView listCollectionView = null;
         internal TaskPaneContext taskPaneContext = null;
@@ -99,7 +101,7 @@ namespace QuickFile
             catch (System.Exception err)
             {
                 MessageBox.Show("Unexpected error processing TextBox_TextChanged.\n" + err.Message, "Fast File Error");
-                Debug.WriteLine("Unexpected error processing TextBox_TextChanged.\n" + err.Message + $"\n{err}");
+                Logger.Error(err, "Unexpected error processing TextBox_TextChanged.");
             }
         } 
 
@@ -330,7 +332,7 @@ namespace QuickFile
             catch (System.Exception err)
             {
                 MessageBox.Show("Unexpected error processing burron.\n" + err.Message, "Fast File Error");
-                Debug.WriteLine("Unexpected error processing button.\n" + err.Message + $"\n{err}");
+                Logger.Error(err, "Unexpected error processing button.");
             }
         }
 
@@ -350,7 +352,7 @@ namespace QuickFile
             int n_item = listBox.Items.Count;
             var i = listBox.SelectedIndex;
 
-            Debug.WriteLine("TextBox PreviewKeydown " + e.Key);
+            Logger.Debug("TextBox PreviewKeydown {key}.", e.Key);
 
             if (n_item == 0)
             {
@@ -383,7 +385,7 @@ namespace QuickFile
 
         private void TextBox_KeyDown(object sender, KeyEventArgs e)
         {
-            Debug.WriteLine("TextBox Keydown " + e.Key);
+            Logger.Debug("TextBox Keydown {key}", e.Key);
             switch (e.Key)
             {
                 case Key.Escape:
@@ -404,7 +406,7 @@ namespace QuickFile
 
         private void UserControl_KeyDown(object sender, KeyEventArgs e)
         {
-            Debug.WriteLine("UserControl_KeyDown " + e.Key);
+            Logger.Debug("UserControl_KeyDown {key}", e.Key);
             switch (e.Key)
             {
                 case Key.Escape:
@@ -428,33 +430,33 @@ namespace QuickFile
             catch (System.Exception err)
             {
                 MessageBox.Show("Unexpected error double click.\n" + err.Message, "Fast File Error");
-                Debug.WriteLine("Unexpected error double click.\n" + err.Message + $"\n{err}");
+                Logger.Error(err, "Unexpected error double click.");
             }
         }
         
         private void UserControl_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            Debug.WriteLine("UserControl_PreviewKeyDown " + e.Key);
+            Logger.Debug("UserControl_PreviewKeyDown {key}", e.Key);
         }
 
         private void textBox_GotFocus(object sender, RoutedEventArgs e)
         {
-            Debug.WriteLine("textBox_GotFocus");
+            Logger.Debug("textBox_GotFocus");
         }
 
         private void textBox_LostFocus(object sender, RoutedEventArgs e)
         {
-            Debug.WriteLine("textBox_LostFocus");
+            Logger.Debug("textBox_LostFocus");
         }
 
         private void textBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
         {
-            Debug.WriteLine("textBox_GotKeyboardFocus");
+            Logger.Debug("textBox_GotKeyboardFocus");
         }
 
         private void textBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
         {
-            Debug.WriteLine("textBox_LostKeyboardFocus");
+            Logger.Debug("textBox_LostKeyboardFocus");
         }
     }
     public class DesignerMockData

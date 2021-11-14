@@ -12,6 +12,9 @@ namespace QuickFile
 {
     public partial class MailReadRibbon
     {
+
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
         private void Ribbon1_Load(object sender, RibbonUIEventArgs e)
         {
             if (this.Context == null)
@@ -36,7 +39,7 @@ namespace QuickFile
             catch (Exception err)
             {
                 MessageBox.Show("Unexpected error processing button.\n" + err.Message, "Fast File Error");
-                Debug.WriteLine("Unexpected error processing button.\n" + err.Message + $"\n{err}");
+                Logger.Error(err, "Unexpected error processing button.");
             }
         }
 
@@ -51,7 +54,7 @@ namespace QuickFile
             catch (Exception err)
             {
                 MessageBox.Show("Unexpected error processing button.\n" + err.Message, "Fast File Error");
-                Debug.WriteLine("Unexpected error processing button.\n" + err.Message + $"\n{err}");
+                Logger.Error(err, "Unexpected error processing button.");
             }
         }
     }

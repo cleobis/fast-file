@@ -33,8 +33,13 @@ namespace QuickFile
 
         private InterceptKeys interceptKeys;
 
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
+            InitLog();
+            Logger.Info("Starting up...");
+
             UpdateFolderListAsync();
 
             interceptKeys = new InterceptKeys();
@@ -55,6 +60,34 @@ namespace QuickFile
             {
                 NewExplorer(inspector);
             }
+        }
+
+        private void InitLog()
+        {
+            // Set-up logging with NLog. Per post below, need to store XML in source code or configure in code.
+            // https://github.com/NLog/NLog/wiki/Tutorial
+            // https://stackoverflow.com/questions/40602775/nlog-does-not-write-to-log-file-when-called-from-outlook-add-in
+            var config = new NLog.Config.LoggingConfiguration();
+
+            // Targets where to log to: File and Console
+            String layout = "${longdate}|${level:uppercase=true}|${logger}|${message} ${exception:format=ToString}";
+            var logfile = new NLog.Targets.FileTarget("logfile") {
+                FileName = System.IO.Path.Combine("${specialfolder:folder=ApplicationData}", "Outlook QuickFile", "log.${shortdate}.txt"),
+                Layout = layout,
+                MaxArchiveFiles = 4,
+                ArchiveAboveSize = 10240,
+            };
+            var logconsole = new NLog.Targets.TraceTarget("logconsole")// ConsoleTarget doesn't work for VSTO plugins.
+            {
+                Layout = layout,
+            };
+
+            // Rules for mapping loggers to targets
+            config.AddRule(NLog.LogLevel.Debug, NLog.LogLevel.Fatal, logconsole);
+            config.AddRule(NLog.LogLevel.Info, NLog.LogLevel.Fatal, logfile);
+
+            // Apply config           
+            NLog.LogManager.Configuration = config;
         }
 
         private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
@@ -247,6 +280,8 @@ namespace QuickFile
         private FolderWrapper _bestFolderWrapper;
         private bool guessBestFolderQueued = false;
 
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
         public TaskPaneContext(Outlook.Explorer explorer) : this(explorer, null) { }
         public TaskPaneContext(Outlook.Inspector inspector) : this(null, inspector) { }
         private TaskPaneContext(Outlook.Explorer explorer, Outlook.Inspector inspector)
@@ -364,7 +399,7 @@ namespace QuickFile
         {
             if (_bestFolderWrapper is null)
             {
-                Debug.WriteLine("No best folder.");
+                Logger.Warn("No best folder.");
             }
             else
             {
@@ -397,7 +432,7 @@ namespace QuickFile
                     catch (Exception err)
                     {
                         MessageBox.Show("Unexpected error processing GuessBestFolderAsync.\n" + err.Message + $"\n{err}", "Fast File Error");
-                        Debug.WriteLine("Unexpected error processing GuessBestFolderAsync.\n" + err.Message + $"\n{err}");
+                        Logger.Error(err, "Unexpected error processing GuessBestFolderAsync.");
                     }
                 }), DispatcherPriority.Background);
             }
@@ -460,10 +495,10 @@ namespace QuickFile
                         {
                             children = conversation.GetChildren(myItem);
                         }
-                        catch (COMException)
+                        catch (COMException err)
                         {
                             var subject = myItem is Outlook.MailItem ? (myItem as Outlook.MailItem).Subject : "<Unknown item>";
-                            Debug.WriteLine("Unable to get conversation children for " + subject);
+                            Logger.Error(err, "Unable to get conversation children for subject {subject}", subject);
                             // I see this with Drafts, meeting invites, and other times.
                             continue;
                         }
@@ -524,9 +559,9 @@ namespace QuickFile
                 {
                     best = Globals.ThisAddIn.foldersCollection.Single(fw => fw.folder.EntryID == bestFolder.EntryID);
                 }
-                catch (InvalidOperationException)
+                catch (InvalidOperationException err)
                 {
-                    Debug.WriteLine("Unable to find folder " + bestFolder.Name + ".");
+                    Logger.Error(err, "Unable to find folder {folderName}.", bestFolder.Name);
                 }
             }
 
@@ -549,10 +584,10 @@ namespace QuickFile
                 {
                     headers = explorer.Selection.GetSelection(Outlook.OlSelectionContents.olConversationHeaders);
                 }
-                catch (COMException)
+                catch (COMException err)
                 {
                     // ^ failed once when moving only part of the message.
-                    Debug.WriteLine("Error with GetSelection().");
+                    Logger.Error(err, "Error with GetSelection().");
                 }
 
 
@@ -572,7 +607,7 @@ namespace QuickFile
                         catch (COMException err)
                         {
                             // Seen after move sometimes
-                            Debug.WriteLine("COMException in header.GetItems(). " + err.Message);
+                            Logger.Error(err, "COMException in header.GetItems().");
                             continue;
                         }
                         for (int i = 1; i <= items.Count; i++)
@@ -595,7 +630,7 @@ namespace QuickFile
                     }
                     catch (COMException err)
                     {
-                        Debug.WriteLine("ComException in explorer.Selection." + err.Message);
+                        Logger.Error(err, "ComException in explorer.Selection.");
                     }
                     if (selection != null)
                     {
@@ -621,7 +656,7 @@ namespace QuickFile
             catch (Exception err)
             {
                 MessageBox.Show("Unexpected error processing Selection Change.\n" + err.Message,"Fast File Error");
-                Debug.WriteLine("Unexpected error processing Selection Change.\n" + err.Message + $"\n{err}");
+                Logger.Error(err, "Unexpected error processing Selection Change.");
             }
         }
 
@@ -703,6 +738,8 @@ namespace QuickFile
         private int depth;
         public bool stale = false;
 
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
         public FolderWrapper(Outlook.Folder folder, FolderWrapper parent = null, List<Outlook.Folder> blacklist = null)
         {
             this.folder = folder;
@@ -769,7 +806,7 @@ namespace QuickFile
         {
             try
             {
-                Debug.WriteLine("FolderAdd Starting");
+                Logger.Debug("FolderAdd Starting");
 
                 FolderWrapper fw = new FolderWrapper(new_folder as Outlook.Folder, this, await Globals.ThisAddIn.GetDefaultFoldersCachedAsync(false));
                 //children.Insert(0,fw);
@@ -777,12 +814,12 @@ namespace QuickFile
 
                 Globals.ThisAddIn.UpdateFolderListAsync();
 
-                Debug.WriteLine("FolderAdd Done.");
+                Logger.Debug("FolderAdd Done.");
             }
             catch (Exception err)
             {
                 MessageBox.Show("Unexpected error processing FolderAdd.\n" + err.Message,"Fast File Error");
-                Debug.WriteLine("Unexpected error processing FolderAdd.\n" + err.Message + $"\n{err}");
+                Logger.Error(err, "Unexpected error processing FolderAdd.");
             }
 }
 
@@ -795,7 +832,7 @@ namespace QuickFile
             catch (Exception err)
             {
                 MessageBox.Show("Unexpected error processing FolderChange.\n" + err.Message,"Fast File Error");
-                Debug.WriteLine("Unexpected error processing FolderChange.\n" + err.Message + $"\n{err}");
+                Logger.Error(err, "Unexpected error processing FolderChange.");
             }
     // Rename, Add child, or delete child.
     // TODO: THIS IS TOO SLOW TO HAVE ENABLED. NEED TO FIX.
@@ -806,7 +843,7 @@ namespace QuickFile
         {
             try
             {
-                Debug.WriteLine("FolderRemove Starting");
+                Logger.Debug("FolderRemove Starting");
 
                 // Temp list of remaining folder for search convenience.
                 var remainingFolderIds = new List<String>(folders.Count);
@@ -826,12 +863,12 @@ namespace QuickFile
 
                 Globals.ThisAddIn.UpdateFolderListAsync();
 
-                Debug.WriteLine("FolderRemove Done");
+                Logger.Debug("FolderRemove Done");
             }
             catch (Exception err)
             {
                 MessageBox.Show("Unexpected error processing FolderRemove.\n" + err.Message, "Fast File Error");
-                Debug.WriteLine("Unexpected error processing FolderRemove.\n" + err.Message + $"\n{err}");
+                Logger.Error(err, "Unexpected error processing FolderRemove.");
             }
         }
 
@@ -856,6 +893,8 @@ namespace QuickFile
         private const int WH_KEYBOARD = 2;
         private LowLevelKeyboardProc _proc;
         private IntPtr _hookID = IntPtr.Zero;
+
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
         public InterceptKeys()
         {
@@ -883,7 +922,7 @@ namespace QuickFile
             {
                 bool check = UnhookWindowsHookEx(_hookID);
                 _hookID = IntPtr.Zero;
-                Debug.WriteLine("Detaching hook. Return was " + check);
+                Logger.Debug("Detaching hook. Return was {check}.", check);
             }
         }
 
@@ -922,7 +961,7 @@ namespace QuickFile
             switch (key)
             {
                 case Key.D1:
-                    Debug.WriteLine("Got D1. Modifiers = " + Keyboard.Modifiers + ", key = " + key + ", flags = " + flags);
+                    Logger.Debug("Got D1. Modifiers = {modifiers}, key = {key}, flags = {flags}.", Keyboard.Modifiers, key, flags);
                     if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
                     {
                         // Ctrl+Shfit+1 => Show GUI
@@ -938,7 +977,7 @@ namespace QuickFile
                             catch (Exception err)
                             {
                                 MessageBox.Show("Unexpected error processing Ctrl+Shift+1.\n" + err.Message, "Fast File Error");
-                                Debug.WriteLine("Unexpected error processing Ctrl+Shift+1.\n" + err.Message + $"\n{err}");
+                                Logger.Error(err, "Unexpected error processing Ctrl+Shift+1.");
                             }
                         }));
                         return IntPtr.Zero + 1;
@@ -954,7 +993,7 @@ namespace QuickFile
                             catch (Exception err)
                             {
                                 MessageBox.Show("Unexpected error processing Ctrl+1.\n" + err.Message, "Fast File Error");
-                                Debug.WriteLine("Unexpected error processing Ctrl+1.\n" + err.Message + $"\n{err}");
+                                Logger.Error(err, "Unexpected error processing Ctrl+1.");
                             }
                     }));
                         return IntPtr.Zero + 1;
@@ -962,7 +1001,7 @@ namespace QuickFile
                     break;
                 case Key.V:
 
-                    Debug.WriteLine("Got v. Modifiers = " + Keyboard.Modifiers + ", key = " + key + ", flags = " + flags);
+                    Logger.Debug("Got v. Modifiers = {modifiers}, key = {key}, flags = {flags}.", Keyboard.Modifiers, key, flags);
                     if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
                     {
                         // Ctrl+Shfit+V => Show GUI
@@ -978,7 +1017,7 @@ namespace QuickFile
                             catch (Exception err)
                             {
                                 MessageBox.Show("Unexpected error processing Ctrl+Shift+V.\n" + err.Message, "Fast File Error");
-                                Debug.WriteLine("Unexpected error processing Ctrl+Shift+V.\n" + err.Message + $"\n{err}");
+                                Logger.Error(err, "Unexpected error processing Ctrl+Shift+V.");
                             }
                         }));
                         return IntPtr.Zero + 1;

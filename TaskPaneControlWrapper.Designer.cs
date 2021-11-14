@@ -2,6 +2,9 @@
 {
     partial class TaskPaneControlWrapper
     {
+
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+        
         /// <summary> 
         /// Required designer variable.
         /// </summary>
