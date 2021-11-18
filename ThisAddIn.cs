@@ -193,7 +193,7 @@ namespace QuickFile
                         try
                         {
                             Log.info("Querying folder enum {enum}", folderType) ;
-                            auto f = Application.Session.DefaultStore.GetDefaultFolder(folderType) as Outlook.Folder
+                            auto f = Application.Session.DefaultStore.GetDefaultFolder(folderType) as Outlook.Folder ;
                             folders.Add(f);
                             Log.info("Found folder enum {enum} as {name}.", folderType, f.Name);
                         } catch (COMException err) {
