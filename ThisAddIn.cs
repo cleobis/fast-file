@@ -162,7 +162,7 @@ namespace QuickFile
 
         public async Task UpdatedDefaultFoldersAsync()
         {
-            Log.Info("Starting UpdatedDefaultFoldersAsync()");
+            Logger.Info("Starting UpdatedDefaultFoldersAsync()");
             
             // TODO: make sure there can't be multiple copies of this executing simultaneously.
             var folders = new List<Outlook.Folder>();
@@ -192,10 +192,10 @@ namespace QuickFile
                     case Outlook.OlDefaultFolders.olFolderToDo:
                         try
                         {
-                            Logger.info("Querying folder enum {enum}", folderType) ;
+                            Logger.Info("Querying folder enum {enum}", folderType) ;
                             Outlook.Folder f = Application.Session.DefaultStore.GetDefaultFolder(folderType) as Outlook.Folder ;
                             folders.Add(f);
-                            Logger.info("Found folder enum {enum} as {name}.", folderType, f.Name);
+                            Logger.Info("Found folder enum {enum} as {name}.", folderType, f.Name);
                         } catch (COMException err) {
                             Logger.Error(err, "Unable to get folder for enum {enum}.", folderType) ;
                             if (err.ErrorCode != -2147221233 // folder not found
