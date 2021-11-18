@@ -192,12 +192,12 @@ namespace QuickFile
                     case Outlook.OlDefaultFolders.olFolderToDo:
                         try
                         {
-                            Log.info("Querying folder enum {enum}", folderType) ;
-                            auto f = Application.Session.DefaultStore.GetDefaultFolder(folderType) as Outlook.Folder ;
+                            Logger.info("Querying folder enum {enum}", folderType) ;
+                            Outlook.Folder f = Application.Session.DefaultStore.GetDefaultFolder(folderType) as Outlook.Folder ;
                             folders.Add(f);
-                            Log.info("Found folder enum {enum} as {name}.", folderType, f.Name);
+                            Logger.info("Found folder enum {enum} as {name}.", folderType, f.Name);
                         } catch (COMException err) {
-                            Log.Error(err, "Unable to get folder for enum {enum}.", folderType) ;
+                            Logger.Error(err, "Unable to get folder for enum {enum}.", folderType) ;
                             if (err.ErrorCode != -2147221233 // folder not found
                                 && err.ErrorCode != unchecked((int)0x8004060E)) // Exchange connection required.
                             {
